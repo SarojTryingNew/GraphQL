@@ -1,0 +1,198 @@
+name: "GraphQL API Tests"
+description: "Comprehensive test suite for GraphQL API"
+
+tests:
+  - name: "Get All Customers"
+    type: "GraphQL"
+    query: |
+      {
+        customers {
+          id
+          name
+          email
+          phone
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "customers"
+
+  - name: "Get Single Customer with Orders"
+    type: "GraphQL"
+    query: |
+      {
+        customer(id: 1) {
+          id
+          name
+          email
+          orders {
+            id
+            orderDate
+            totalAmount
+            status
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "customer"
+
+  - name: "Get Order with Full Nested Data"
+    type: "GraphQL"
+    query: |
+      {
+        order(id: 1) {
+          id
+          orderDate
+          status
+          totalAmount
+          customer {
+            id
+            name
+            email
+          }
+          items {
+            id
+            quantity
+            unitPrice
+            discount
+            product {
+              id
+              name
+              price
+              category {
+                id
+                name
+              }
+            }
+            notes {
+              id
+              content
+              createdAt
+            }
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "order"
+
+  - name: "Get Dashboard Data"
+    type: "GraphQL"
+    query: |
+      {
+        dashboard {
+          totalCustomers
+          totalOrders
+          totalRevenue
+          pendingOrders
+          completedOrders
+          topProducts {
+            productId
+            productName
+            quantitySold
+            revenue
+          }
+          recentOrders {
+            orderId
+            orderDate
+            customerName
+            totalAmount
+            status
+          }
+          topCustomers {
+            customerId
+            customerName
+            orderCount
+            totalSpent
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "dashboard"
+
+  - name: "Get Products with Categories"
+    type: "GraphQL"
+    query: |
+      {
+        products {
+          id
+          name
+          description
+          price
+          stockQuantity
+          category {
+            id
+            name
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "products"
+
+  - name: "Create Single Order"
+    type: "GraphQL"
+    query: |
+      mutation {
+        createOrder(orderDto: {
+          customerId: 1
+          status: "Pending"
+          items: [
+            {
+              productId: 1
+              quantity: 3
+              discount: 10
+              notes: ["GraphQL test order"]
+            }
+          ]
+        }) {
+          id
+          orderDate
+          status
+          totalAmount
+          items {
+            id
+            quantity
+            product {
+              name
+            }
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+      contains: "createOrder"
+
+  - name: "Bulk Create Orders"
+    type: "GraphQL"
+    query: "mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: \"Pending\", items: [{ productId: 1, quantity: 2, discount: 5, notes: [\"Bulk test 1\"] }] }, { customerId: 2, status: \"Pending\", items: [{ productId: 2, quantity: 1, discount: 0, notes: [] }] }] }) { successCount failureCount errors createdIds } }"
+    assertions:
+      statusCode: 200
+      contains: "bulkCreateOrders"
+
+  - name: "Get Multiple Resources in One Query"
+    type: "GraphQL"
+    query: |
+      {
+        customers {
+          id
+          name
+        }
+        products {
+          id
+          name
+          price
+        }
+        orders {
+          id
+          status
+        }
+      }
+    assertions:
+      statusCode: 200
+      containsList:
+        - "customers"
+        - "products"
+        - "orders"

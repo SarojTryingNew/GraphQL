@@ -1,0 +1,75 @@
+using RestVsGraphQL.GraphQL;
+using RestVsGraphQL.Services;
+using RestVsGraphQL.Metrics;
+using RestVsGraphQL.Middleware;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// Add services to the container.
+builder.Services.AddSingleton<DataStore>();
+builder.Services.AddSingleton<MetricsCollector>();
+
+builder.Services.AddControllers();
+
+// Add Swagger/OpenAPI
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "REST vs GraphQL Comparison API",
+        Version = "v1",
+        Description = "A comprehensive API demonstrating REST and GraphQL implementations with bulk operations, nested data, and dashboard aggregations.",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "REST vs GraphQL Project"
+        }
+    });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(builder =>
+    {
+        builder.AllowAnyOrigin()
+               .AllowAnyMethod()
+               .AllowAnyHeader();
+    });
+});
+
+// Add GraphQL
+builder.Services
+    .AddGraphQLServer()
+    .AddQueryType<Query>()
+    .AddMutationType<Mutation>();
+
+var app = builder.Build();
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "REST vs GraphQL API v1");
+        options.RoutePrefix = "swagger";
+        options.DocumentTitle = "REST vs GraphQL API";
+        options.DefaultModelsExpandDepth(2);
+        options.DefaultModelRendering(Swashbuckle.AspNetCore.SwaggerUI.ModelRendering.Model);
+    });
+}
+
+app.UseHttpsRedirection();
+
+app.UseCors();
+
+// Add metrics middleware
+app.UseMiddleware<MetricsMiddleware>();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapGraphQL("/graphql");
+
+app.Run();

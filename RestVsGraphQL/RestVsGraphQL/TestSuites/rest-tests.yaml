@@ -1,0 +1,84 @@
+name: "REST API Tests"
+description: "Comprehensive test suite for REST API endpoints"
+
+tests:
+  - name: "Get All Customers"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers"
+    assertions:
+      statusCode: 200
+      contains: "email"
+
+  - name: "Get Single Customer"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers/1"
+    assertions:
+      statusCode: 200
+      contains: "John Doe"
+
+  - name: "Get Customer Orders"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers/1/orders"
+    assertions:
+      statusCode: 200
+
+  - name: "Get All Orders"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/orders"
+    assertions:
+      statusCode: 200
+
+  - name: "Get Order with Nested Data"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/orders/1/nested"
+    assertions:
+      statusCode: 200
+      containsList:
+        - "customer"
+        - "items"
+
+  - name: "Get Dashboard"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/dashboard"
+    assertions:
+      statusCode: 200
+      containsList:
+        - "totalCustomers"
+        - "topProducts"
+
+  - name: "Get All Products"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/products"
+    assertions:
+      statusCode: 200
+
+  - name: "Bulk Create Orders"
+    type: "REST"
+    method: "POST"
+    endpoint: "/api/orders/bulk"
+    body:
+      orders:
+        - customerId: 1
+          status: "Pending"
+          items:
+            - productId: 1
+              quantity: 2
+              discount: 5
+              notes: ["Test order from YAML"]
+        - customerId: 2
+          status: "Pending"
+          items:
+            - productId: 2
+              quantity: 1
+              discount: 0
+              notes: []
+    assertions:
+      statusCode: 200
+      contains: "successCount"

@@ -1,0 +1,139 @@
+name: "REST vs GraphQL Comparison Tests"
+description: "Side-by-side comparison of REST and GraphQL for identical operations"
+
+tests:
+  # Scenario 1: Simple Data Retrieval
+  - name: "REST - Get Customer"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers/1"
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - Get Customer"
+    type: "GraphQL"
+    query: |
+      {
+        customer(id: 1) {
+          id
+          name
+          email
+          phone
+          createdAt
+        }
+      }
+    assertions:
+      statusCode: 200
+
+  # Scenario 2: Nested Object Graph
+  - name: "REST - Order with Nested Data"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/orders/1/nested"
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - Order with Nested Data"
+    type: "GraphQL"
+    query: |
+      {
+        order(id: 1) {
+          id
+          orderDate
+          status
+          totalAmount
+          customer { id name email }
+          items {
+            id
+            quantity
+            unitPrice
+            product { id name category { id name } }
+            notes { id content }
+          }
+        }
+      }
+    assertions:
+      statusCode: 200
+
+  # Scenario 3: Dashboard Aggregation
+  - name: "REST - Dashboard"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/dashboard"
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - Dashboard"
+    type: "GraphQL"
+    query: |
+      {
+        dashboard {
+          totalCustomers
+          totalOrders
+          totalRevenue
+          topProducts { productName revenue }
+          topCustomers { customerName totalSpent }
+        }
+      }
+    assertions:
+      statusCode: 200
+
+  # Scenario 4: Bulk Operations
+  - name: "REST - Bulk Create Orders"
+    type: "REST"
+    method: "POST"
+    endpoint: "/api/orders/bulk"
+    body:
+      orders:
+        - customerId: 1
+          status: "Pending"
+          items:
+            - productId: 1
+              quantity: 2
+              discount: 5
+              notes: ["Comparison test"]
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - Bulk Create Orders"
+    type: "GraphQL"
+    query: "mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: \"Pending\", items: [{ productId: 1, quantity: 2, discount: 5, notes: [\"Comparison test\"] }] }] }) { successCount failureCount createdIds } }"
+    assertions:
+      statusCode: 200
+
+  # Scenario 5: Multiple Dependent Calls
+  - name: "REST - Customer Info (Call 1 of 3)"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers/1"
+    assertions:
+      statusCode: 200
+
+  - name: "REST - Customer Orders (Call 2 of 3)"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/customers/1/orders"
+    assertions:
+      statusCode: 200
+
+  - name: "REST - All Products (Call 3 of 3)"
+    type: "REST"
+    method: "GET"
+    endpoint: "/api/products"
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - All Data in Single Call"
+    type: "GraphQL"
+    query: |
+      {
+        customer(id: 1) {
+          id
+          name
+          email
+          orders { id orderDate totalAmount status }
+        }
+        products { id name price stockQuantity }
+      }
+    assertions:
+      statusCode: 200
