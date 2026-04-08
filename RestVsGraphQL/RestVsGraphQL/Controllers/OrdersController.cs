@@ -212,4 +212,46 @@ public class OrdersController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpDelete("bulk")]
+    public ActionResult<BulkOperationResult> BulkDeleteOrders([FromBody] BulkOrderDeleteRequest request)
+    {
+        var result = new BulkOperationResult();
+
+        foreach (var orderId in request.OrderIds)
+        {
+            try
+            {
+                var order = _dataStore.Orders.FirstOrDefault(o => o.Id == orderId);
+                if (order == null)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Order {orderId} not found");
+                    continue;
+                }
+
+                var orderItems = _dataStore.OrderItems.Where(oi => oi.OrderId == orderId).ToList();
+                foreach (var item in orderItems)
+                {
+                    var notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
+                    foreach (var note in notes)
+                    {
+                        _dataStore.OrderItemNotes.Remove(note);
+                    }
+                    _dataStore.OrderItems.Remove(item);
+                }
+
+                _dataStore.Orders.Remove(order);
+                result.SuccessCount++;
+                result.DeletedIds.Add(orderId);
+            }
+            catch (Exception ex)
+            {
+                result.FailureCount++;
+                result.Errors.Add(ex.Message);
+            }
+        }
+
+        return Ok(result);
+    }
 }

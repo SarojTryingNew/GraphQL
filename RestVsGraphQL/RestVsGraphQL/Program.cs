@@ -63,6 +63,10 @@ app.UseHttpsRedirection();
 
 app.UseCors();
 
+// Enable static files for front-end demo
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 // Add metrics middleware
 app.UseMiddleware<MetricsMiddleware>();
 

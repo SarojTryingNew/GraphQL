@@ -157,6 +157,49 @@ public class Mutation
         return result;
     }
 
+    public BulkOperationResult BulkDeleteOrders(
+        BulkOrderDeleteRequest request,
+        [Service] DataStore dataStore)
+    {
+        var result = new BulkOperationResult();
+
+        foreach (var orderId in request.OrderIds)
+        {
+            try
+            {
+                var order = dataStore.Orders.FirstOrDefault(o => o.Id == orderId);
+                if (order == null)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Order {orderId} not found");
+                    continue;
+                }
+
+                var orderItems = dataStore.OrderItems.Where(oi => oi.OrderId == orderId).ToList();
+                foreach (var item in orderItems)
+                {
+                    var notes = dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
+                    foreach (var note in notes)
+                    {
+                        dataStore.OrderItemNotes.Remove(note);
+                    }
+                    dataStore.OrderItems.Remove(item);
+                }
+
+                dataStore.Orders.Remove(order);
+                result.SuccessCount++;
+                result.DeletedIds.Add(orderId);
+            }
+            catch (Exception ex)
+            {
+                result.FailureCount++;
+                result.Errors.Add(ex.Message);
+            }
+        }
+
+        return result;
+    }
+
     public Order CreateOrder(OrderCreateDto orderDto, [Service] DataStore dataStore)
     {
         var customer = dataStore.Customers.FirstOrDefault(c => c.Id == orderDto.CustomerId);

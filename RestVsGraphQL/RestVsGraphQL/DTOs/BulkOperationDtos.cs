@@ -40,10 +40,16 @@ public class OrderItemUpdateDto
     public decimal Discount { get; set; }
 }
 
+public class BulkOrderDeleteRequest
+{
+    public List<int> OrderIds { get; set; } = new();
+}
+
 public class BulkOperationResult
 {
     public int SuccessCount { get; set; }
     public int FailureCount { get; set; }
     public List<string> Errors { get; set; } = new();
     public List<int> CreatedIds { get; set; } = new();
+    public List<int> DeletedIds { get; set; } = new();
 }

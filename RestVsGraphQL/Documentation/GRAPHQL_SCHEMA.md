@@ -245,6 +245,27 @@ mutation BulkUpdateOrders($request: BulkOrderUpdateRequestInput!) {
 }
 ```
 
+### Bulk Delete Orders
+```graphql
+mutation BulkDeleteOrders($request: BulkOrderDeleteRequestInput!) {
+  bulkDeleteOrders(request: $request) {
+    successCount
+    failureCount
+    errors
+    deletedIds
+  }
+}
+```
+
+**Variables:**
+```json
+{
+  "request": {
+    "orderIds": [1, 2, 3, 4, 5]
+  }
+}
+```
+
 ---
 
 ## 📦 Types

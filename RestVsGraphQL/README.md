@@ -19,6 +19,16 @@ A comprehensive .NET 9 project demonstrating performance comparisons between RES
 # Browser automatically opens: http://localhost:5072/api/metrics/report
 ```
 
+**Or explore the interactive front-end demo:**
+```powershell
+# 1. Start the API
+.\start-api.ps1
+
+# 2. Open front-end demo
+# Browser: http://localhost:5072
+# Try GraphQL vs REST side-by-side with live examples!
+```
+
 ---
 
 ## 📋 Project Overview
@@ -29,7 +39,7 @@ This project provides a comprehensive comparison between **REST** and **GraphQL*
 
 | Scenario | Description | REST | GraphQL |
 |----------|-------------|------|---------|
-| **(a) Bulk Operations** | Create/Update multiple records in single request | POST/PUT /api/orders/bulk | bulkCreateOrders mutation |
+| **(a) Bulk Operations** | Create/Update/Delete multiple records in single request | POST/PUT/DELETE /api/orders/bulk | bulkCreateOrders, bulkUpdateOrders, bulkDeleteOrders mutations |
 | **(b) Nested Object Graphs** | Deep traversal (4 levels): Order → Items → Product → Category | GET /api/orders/1/nested | Nested GraphQL query |
 | **(c) Dashboard Aggregation** | Complex aggregations, computed metrics, Top-N queries | GET /api/dashboard | dashboard query with aggregations |
 | **(d) Multiple Dependent Calls** | Fetch related resources | 3 HTTP calls (N+1 problem) | 1 combined query (67% fewer calls) |
@@ -60,12 +70,23 @@ All detailed documentation is in the **`Documentation/`** folder:
 
 | Document | Description | When to Read |
 |----------|-------------|--------------|
+| **[FRONTEND_DEMO.md](Documentation/FRONTEND_DEMO.md)** | **Interactive web demo guide** | Try live REST vs GraphQL ⭐ |
 | **[SCRIPTS.md](Documentation/SCRIPTS.md)** | PowerShell scripts reference & usage | Understanding test scripts |
 | **[PERFORMANCE_TESTING.md](Documentation/PERFORMANCE_TESTING.md)** | **Complete performance testing guide** | Before running tests ⭐ |
 | **[GRAPHQL_SCHEMA.md](Documentation/GRAPHQL_SCHEMA.md)** | **GraphQL queries, mutations & schema** | Working with GraphQL API ⭐ |
 | **[QUICKSTART.md](Documentation/QUICKSTART.md)** | Quick start guide | First time setup |
+| **[POC_ASSESSMENT.md](Documentation/POC_ASSESSMENT.md)** | POC completion status (100%) | Project validation ✅ |
 
 ### 📖 Key Documentation Highlights
+
+#### [Interactive Front-End Demo](Documentation/FRONTEND_DEMO.md)
+**Live web-based demonstration:**
+- Side-by-side REST vs GraphQL comparison
+- Bulk create and delete operations
+- Custom GraphQL query editor
+- Real-time performance metrics
+- Pre-built query templates
+- Access at `http://localhost:5072/`
 
 #### [Performance Testing Guide](Documentation/PERFORMANCE_TESTING.md)
 **Comprehensive guide covering:**
@@ -79,7 +100,7 @@ All detailed documentation is in the **`Documentation/`** folder:
 #### [GraphQL Schema Reference](Documentation/GRAPHQL_SCHEMA.md)
 **Complete GraphQL API documentation:**
 - All queries (customers, orders, products, dashboard)
-- All mutations (bulkCreateOrders, bulkUpdateOrders)
+- All mutations (bulkCreateOrders, bulkUpdateOrders, bulkDeleteOrders)
 - Type definitions and relationships
 - Example queries and mutations
 - Best practices and tips

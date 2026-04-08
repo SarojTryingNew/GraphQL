@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphQL vs REST - Interactive Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .demo-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            padding: 25px;
+        }
+
+        .card h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+            font-size: 1.5em;
+        }
+
+        .card h3 {
+            color: #555;
+            margin: 20px 0 10px 0;
+            font-size: 1.2em;
+        }
+
+        .rest-card h2 {
+            border-bottom-color: #f093fb;
+        }
+
+        .graphql-card h2 {
+            border-bottom-color: #4facfe;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .rest-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .rest-btn:hover {
+            box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+        }
+
+        .graphql-btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .graphql-btn:hover {
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .response {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 200px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-box.rest {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stat-box.graphql {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 4px;
+        }
+
+        .info-box h4 {
+            color: #1976d2;
+            margin-bottom: 8px;
+        }
+
+        .info-box p {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .comparison-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .comparison-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .winner {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        @media (max-width: 968px) {
+            .demo-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GraphQL vs REST - Interactive Demo</h1>
+            <p>Explore the differences between GraphQL and REST APIs with live examples</p>
+        </header>
+
+        <div class="demo-grid">
+            <!-- REST Section -->
+            <div class="card rest-card">
+                <h2>REST API</h2>
+                
+                <h3>Bulk Create Orders</h3>
+                <label>Number of Orders:</label>
+                <input type="number" id="restBulkCount" value="5" min="1" max="100">
+                <button class="rest-btn" onclick="restBulkCreate()">Create Orders (REST)</button>
+                
+                <h3>Bulk Delete Orders</h3>
+                <label>Order IDs (comma-separated):</label>
+                <textarea id="restDeleteIds" placeholder="e.g., 1,2,3,4,5"></textarea>
+                <button class="rest-btn" onclick="restBulkDelete()">Delete Orders (REST)</button>
+                
+                <h3>Response</h3>
+                <div id="restResponse" class="response">Response will appear here...</div>
+                
+                <div class="stats">
+                    <div class="stat-box rest">
+                        <div class="stat-label">Response Time</div>
+                        <div class="stat-value" id="restTime">-</div>
+                    </div>
+                    <div class="stat-box rest">
+                        <div class="stat-label">Requests Made</div>
+                        <div class="stat-value" id="restRequests">-</div>
+                    </div>
+                    <div class="stat-box rest">
+                        <div class="stat-label">Data Size</div>
+                        <div class="stat-value" id="restSize">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- GraphQL Section -->
+            <div class="card graphql-card">
+                <h2>GraphQL API</h2>
+                
+                <h3>Bulk Create Orders</h3>
+                <label>Number of Orders:</label>
+                <input type="number" id="graphqlBulkCount" value="5" min="1" max="100">
+                <button class="graphql-btn" onclick="graphqlBulkCreate()">Create Orders (GraphQL)</button>
+                
+                <h3>Bulk Delete Orders</h3>
+                <label>Order IDs (comma-separated):</label>
+                <textarea id="graphqlDeleteIds" placeholder="e.g., 1,2,3,4,5"></textarea>
+                <button class="graphql-btn" onclick="graphqlBulkDelete()">Delete Orders (GraphQL)</button>
+                
+                <h3>Response</h3>
+                <div id="graphqlResponse" class="response">Response will appear here...</div>
+                
+                <div class="stats">
+                    <div class="stat-box graphql">
+                        <div class="stat-label">Response Time</div>
+                        <div class="stat-value" id="graphqlTime">-</div>
+                    </div>
+                    <div class="stat-box graphql">
+                        <div class="stat-label">Requests Made</div>
+                        <div class="stat-value" id="graphqlRequests">-</div>
+                    </div>
+                    <div class="stat-box graphql">
+                        <div class="stat-label">Data Size</div>
+                        <div class="stat-value" id="graphqlSize">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Examples Section -->
+            <div class="card full-width">
+                <h2>GraphQL Query Examples</h2>
+                
+                <div class="button-group">
+                    <button class="graphql-btn" onclick="loadQuery('simple')">Simple Query</button>
+                    <button class="graphql-btn" onclick="loadQuery('nested')">Nested Query</button>
+                    <button class="graphql-btn" onclick="loadQuery('dashboard')">Dashboard Aggregation</button>
+                    <button class="graphql-btn" onclick="loadQuery('multiple')">Multiple Resources</button>
+                </div>
+                
+                <h3>GraphQL Query</h3>
+                <textarea id="customQuery" placeholder="Enter your GraphQL query here..."></textarea>
+                <button class="graphql-btn" onclick="executeCustomQuery()">Execute Query</button>
+                
+                <h3>Query Response</h3>
+                <div id="customQueryResponse" class="response">Response will appear here...</div>
+            </div>
+
+            <!-- Performance Comparison -->
+            <div class="card full-width">
+                <h2>Performance Comparison</h2>
+                
+                <div class="info-box">
+                    <h4>Key Advantages of GraphQL</h4>
+                    <p>
+                        <strong>Single Request:</strong> GraphQL retrieves all related data in one request, reducing network overhead.<br>
+                        <strong>Flexible Queries:</strong> Clients specify exactly what data they need, avoiding over-fetching or under-fetching.<br>
+                        <strong>Bulk Operations:</strong> Create, update, or delete multiple resources efficiently in one mutation.<br>
+                        <strong>Real-time Updates:</strong> Built-in subscription support for real-time data synchronization.
+                    </p>
+                </div>
+                
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Scenario</th>
+                            <th>REST Requests</th>
+                            <th>GraphQL Requests</th>
+                            <th>Improvement</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Bulk Create 10 Orders</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>Same</td>
+                        </tr>
+                        <tr>
+                            <td>Nested Object Graph (4 levels)</td>
+                            <td>4</td>
+                            <td>1</td>
+                            <td class="winner">75% reduction</td>
+                        </tr>
+                        <tr>
+                            <td>Dashboard Aggregation</td>
+                            <td>4</td>
+                            <td>1</td>
+                            <td class="winner">75% reduction</td>
+                        </tr>
+                        <tr>
+                            <td>Multiple Dependent Calls</td>
+                            <td>3</td>
+                            <td>1</td>
+                            <td class="winner">67% reduction</td>
+                        </tr>
+                        <tr>
+                            <td>Bulk Delete 20 Orders</td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>Same</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5072';
+        const GRAPHQL_ENDPOINT = `${API_BASE}/graphql`;
+
+        // Helper function to format JSON
+        function formatJSON(data) {
+            return JSON.stringify(data, null, 2);
+        }
+
+        // Helper function to format file size
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+        }
+
+        // Generate sample order data
+        function generateOrderData(count) {
+            const orders = [];
+            // DataStore has 5 customers (IDs 1-5) and 8 products (IDs 1-8)
+            const validCustomerIds = [1, 2, 3, 4, 5];
+            const validProductIds = [1, 2, 3, 4, 5, 6, 7, 8];
+
+            for (let i = 0; i < count; i++) {
+                orders.push({
+                    customerId: validCustomerIds[Math.floor(Math.random() * validCustomerIds.length)],
+                    status: "Pending",
+                    items: [
+                        {
+                            productId: validProductIds[Math.floor(Math.random() * validProductIds.length)],
+                            quantity: Math.floor(Math.random() * 5) + 1,
+                            discount: Math.random() * 10,
+                            notes: ["Auto-generated order", `Batch item ${i + 1}`]
+                        }
+                    ]
+                });
+            }
+            return orders;
+        }
+
+        // REST: Bulk Create Orders
+        async function restBulkCreate() {
+            const count = parseInt(document.getElementById('restBulkCount').value);
+            const orders = generateOrderData(count);
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orders/bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orders })
+                });
+                
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+                
+                document.getElementById('restResponse').textContent = responseText;
+                document.getElementById('restTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('restRequests').textContent = '1';
+                document.getElementById('restSize').textContent = formatSize(responseText.length);
+            } catch (error) {
+                document.getElementById('restResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // REST: Bulk Delete Orders
+        async function restBulkDelete() {
+            const idsText = document.getElementById('restDeleteIds').value;
+            const orderIds = idsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            
+            if (orderIds.length === 0) {
+                document.getElementById('restResponse').textContent = 'Please enter valid order IDs';
+                return;
+            }
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/orders/bulk`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderIds })
+                });
+                
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+                
+                document.getElementById('restResponse').textContent = responseText;
+                document.getElementById('restTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('restRequests').textContent = '1';
+                document.getElementById('restSize').textContent = formatSize(responseText.length);
+            } catch (error) {
+                document.getElementById('restResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // GraphQL: Bulk Create Orders
+        async function graphqlBulkCreate() {
+            const count = parseInt(document.getElementById('graphqlBulkCount').value);
+            const orders = generateOrderData(count);
+            
+            const mutation = `
+                mutation BulkCreateOrders($request: BulkOrderCreateRequestInput!) {
+                    bulkCreateOrders(request: $request) {
+                        successCount
+                        failureCount
+                        errors
+                        createdIds
+                    }
+                }
+            `;
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: mutation,
+                        variables: { request: { orders } }
+                    })
+                });
+                
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+                
+                document.getElementById('graphqlResponse').textContent = responseText;
+                document.getElementById('graphqlTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('graphqlRequests').textContent = '1';
+                document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
+            } catch (error) {
+                document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // GraphQL: Bulk Delete Orders
+        async function graphqlBulkDelete() {
+            const idsText = document.getElementById('graphqlDeleteIds').value;
+            const orderIds = idsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+            
+            if (orderIds.length === 0) {
+                document.getElementById('graphqlResponse').textContent = 'Please enter valid order IDs';
+                return;
+            }
+            
+            const mutation = `
+                mutation BulkDeleteOrders($request: BulkOrderDeleteRequestInput!) {
+                    bulkDeleteOrders(request: $request) {
+                        successCount
+                        failureCount
+                        errors
+                        deletedIds
+                    }
+                }
+            `;
+            
+            const startTime = performance.now();
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: mutation,
+                        variables: { request: { orderIds } }
+                    })
+                });
+                
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+                
+                document.getElementById('graphqlResponse').textContent = responseText;
+                document.getElementById('graphqlTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('graphqlRequests').textContent = '1';
+                document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
+            } catch (error) {
+                document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Load predefined queries
+        function loadQuery(type) {
+            const queries = {
+                simple: `query GetCustomers {
+  customers {
+    id
+    name
+    email
+    city
+  }
+}`,
+                nested: `query GetOrderWithNesting {
+  order(id: 1) {
+    id
+    orderDate
+    status
+    totalAmount
+    customer {
+      name
+      email
+    }
+    items {
+      quantity
+      unitPrice
+      product {
+        name
+        price
+        category {
+          name
+        }
+      }
+      notes {
+        content
+        createdAt
+      }
+    }
+  }
+}`,
+                dashboard: `query GetDashboard {
+  dashboard {
+    totalCustomers
+    totalOrders
+    totalRevenue
+    averageOrderValue
+    topProducts {
+      name
+      category { name }
+      price
+    }
+    recentOrders {
+      id
+      orderDate
+      totalAmount
+      customer { name }
+    }
+  }
+}`,
+                multiple: `query GetMultipleResources {
+  customers(take: 5) {
+    id
+    name
+    email
+  }
+  products(take: 5) {
+    id
+    name
+    price
+    category { name }
+  }
+  orders(take: 5) {
+    id
+    orderDate
+    totalAmount
+    status
+  }
+}`
+            };
+            
+            document.getElementById('customQuery').value = queries[type];
+        }
+
+        // Execute custom GraphQL query
+        async function executeCustomQuery() {
+            const query = document.getElementById('customQuery').value;
+            
+            if (!query.trim()) {
+                document.getElementById('customQueryResponse').textContent = 'Please enter a GraphQL query';
+                return;
+            }
+            
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+                
+                const data = await response.json();
+                document.getElementById('customQueryResponse').textContent = formatJSON(data);
+            } catch (error) {
+                document.getElementById('customQueryResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Load simple query on page load
+        window.addEventListener('load', () => {
+            loadQuery('simple');
+        });
+    </script>
+</body>
+</html>
