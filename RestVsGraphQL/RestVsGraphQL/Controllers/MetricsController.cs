@@ -121,14 +121,49 @@ public class MetricsController : ControllerBase
             .examples-btn { display: inline-block; padding: 15px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; margin: 20px 0; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; }
             .examples-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); }
             .examples-btn::before { content: ''; }
+            .clear-btn { padding: 12px 24px; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); transition: transform 0.2s, box-shadow 0.2s; }
+            .clear-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0,0,0,0.15); background: linear-gradient(135deg, #c0392b 0%, #a93226 100%); }
+            .header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         ");
-        sb.AppendLine("</style></head><body>");
+        sb.AppendLine("</style>");
+        sb.AppendLine("<script>");
+        sb.AppendLine(@"
+            async function clearMetrics() {
+                if (!confirm('Are you sure you want to clear all metrics and reset the data? This action cannot be undone.')) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/metrics/reset', { method: 'POST' });
+
+                    if (response.ok) {
+                        alert('✅ Metrics cleared successfully! The page will now reload.');
+                        location.reload();
+                    } else {
+                        const error = await response.text();
+                        alert('❌ Error clearing metrics: ' + error);
+                    }
+                } catch (error) {
+                    alert('❌ Network error clearing metrics: ' + error.message);
+                }
+            }
+        ");
+        sb.AppendLine("</script>");
+        sb.AppendLine("</head><body>");
         sb.AppendLine("<div class='container'>");
 
-        sb.AppendLine($"<h1>REST vs GraphQL - KPI & NFR Comparison Report</h1>");
-        sb.AppendLine($"<p><strong>Test Scenario:</strong> {report.TestScenario}</p>");
-        sb.AppendLine($"<p><strong>Test Started:</strong> {report.TestStartTime:yyyy-MM-dd HH:mm:ss} UTC</p>");
-        sb.AppendLine($"<p><strong>Report Generated:</strong> {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC</p>");
+        sb.AppendLine("<div class='header-controls'>");
+        sb.AppendLine("<div>");
+        sb.AppendLine($"<h1 style='margin: 0;'>REST vs GraphQL - KPI & NFR Comparison Report</h1>");
+        sb.AppendLine($"<p style='margin: 5px 0;'><strong>Test Scenario:</strong> {report.TestScenario}</p>");
+        sb.AppendLine($"<p style='margin: 5px 0;'><strong>Test Started:</strong> {report.TestStartTime:yyyy-MM-dd HH:mm:ss} UTC</p>");
+        sb.AppendLine($"<p style='margin: 5px 0;'><strong>Report Generated:</strong> {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC</p>");
+        sb.AppendLine("</div>");
+        sb.AppendLine("<div>");
+        sb.AppendLine("<button class='clear-btn' onclick='clearMetrics()'>🗑️ Clear Metrics & Reset</button>");
+        sb.AppendLine("<p style='color: #7f8c8d; font-size: 12px; margin-top: 8px; text-align: right;'>Reset all metrics and start fresh testing</p>");
+        sb.AppendLine("</div>");
+        sb.AppendLine("</div>");
 
         // Executive Summary
         sb.AppendLine("<div class='summary-box'>");

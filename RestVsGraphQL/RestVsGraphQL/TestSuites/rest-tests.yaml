@@ -82,3 +82,27 @@ tests:
     assertions:
       statusCode: 200
       contains: "successCount"
+
+  - name: "Bulk Delete Orders (Non-Existent IDs)"
+    type: "REST"
+    method: "DELETE"
+    endpoint: "/api/orders/bulk"
+    body:
+      orderIds: [999999, 999998]
+    assertions:
+      statusCode: 200
+      containsList:
+        - "failureCount"
+        - "not found"
+
+  - name: "Bulk Delete Orders (Existent IDs)"
+    type: "REST"
+    method: "DELETE"
+    endpoint: "/api/orders/bulk"
+    body:
+      orderIds: [15, 16, 17]
+    assertions:
+      statusCode: 200
+      containsList:
+        - "successCount"
+        - "deletedIds"

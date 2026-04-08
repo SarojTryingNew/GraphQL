@@ -50,7 +50,7 @@ public class OrdersController : ControllerBase
 
         order.Customer = _dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
         order.Items = _dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-        
+
         foreach (var item in order.Items)
         {
             item.Product = _dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
@@ -62,6 +62,38 @@ public class OrdersController : ControllerBase
         }
 
         return Ok(order);
+    }
+
+    [HttpGet("bulk")]
+    public ActionResult<IEnumerable<Order>> GetOrdersByIds([FromQuery] string ids)
+    {
+        if (string.IsNullOrWhiteSpace(ids))
+            return BadRequest("Order IDs are required");
+
+        var orderIds = ids.Split(',')
+            .Select(id => int.TryParse(id.Trim(), out var result) ? result : (int?)null)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value)
+            .ToList();
+
+        if (!orderIds.Any())
+            return BadRequest("No valid order IDs provided");
+
+        var orders = _dataStore.Orders.Where(o => orderIds.Contains(o.Id)).ToList();
+
+        foreach (var order in orders)
+        {
+            order.Customer = _dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
+            order.Items = _dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
+
+            foreach (var item in order.Items)
+            {
+                item.Product = _dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
+                item.Notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
+            }
+        }
+
+        return Ok(orders);
     }
 
     [HttpPost("bulk")]

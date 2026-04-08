@@ -167,10 +167,30 @@ tests:
 
   - name: "Bulk Create Orders"
     type: "GraphQL"
-    query: "mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: \"Pending\", items: [{ productId: 1, quantity: 2, discount: 5, notes: [\"Bulk test 1\"] }] }, { customerId: 2, status: \"Pending\", items: [{ productId: 2, quantity: 1, discount: 0, notes: [] }] }] }) { successCount failureCount errors createdIds } }"
+    query: 'mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: "Pending", items: [{ productId: 1, quantity: 2, discount: 5, notes: ["Bulk test 1"] }] }, { customerId: 2, status: "Pending", items: [{ productId: 2, quantity: 1, discount: 0, notes: [] }] }] }) { successCount failureCount errors createdIds } }'
     assertions:
       statusCode: 200
       contains: "bulkCreateOrders"
+
+  - name: "Bulk Delete Orders (Non-Existent IDs)"
+    type: "GraphQL"
+    query: "mutation { bulkDeleteOrders(request: { orderIds: [999999, 999998] }) { successCount failureCount errors deletedIds } }"
+    assertions:
+      statusCode: 200
+      containsList:
+        - "bulkDeleteOrders"
+        - "failureCount"
+        - "not found"
+
+  - name: "Bulk Delete Orders (Existent IDs)"
+    type: "GraphQL"
+    query: "mutation { bulkDeleteOrders(request: { orderIds: [18, 19, 20] }) { successCount failureCount errors deletedIds } }"
+    assertions:
+      statusCode: 200
+      containsList:
+        - "bulkDeleteOrders"
+        - "successCount"
+        - "deletedIds"
 
   - name: "Get Multiple Resources in One Query"
     type: "GraphQL"

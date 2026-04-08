@@ -21,7 +21,7 @@ public class Query
 
         order.Customer = dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
         order.Items = dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-        
+
         foreach (var item in order.Items)
         {
             item.Product = dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
@@ -29,6 +29,25 @@ public class Query
         }
 
         return order;
+    }
+
+    public IEnumerable<Order> GetOrdersByIds(List<int> ids, [Service] DataStore dataStore)
+    {
+        var orders = dataStore.Orders.Where(o => ids.Contains(o.Id)).ToList();
+
+        foreach (var order in orders)
+        {
+            order.Customer = dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
+            order.Items = dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
+
+            foreach (var item in order.Items)
+            {
+                item.Product = dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
+                item.Notes = dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
+            }
+        }
+
+        return orders;
     }
 
     public IEnumerable<Product> GetProducts([Service] DataStore dataStore)

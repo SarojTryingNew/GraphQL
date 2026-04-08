@@ -283,23 +283,39 @@
         </header>
 
         <div class="demo-grid">
+            <!-- Unified Input Section -->
+            <div class="card full-width" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h2 style="color: white; border-bottom-color: white;">Control Panel</h2>
+
+                <h3 style="color: white;">Bulk Create Orders</h3>
+                <label style="color: white;">Number of Orders:</label>
+                <input type="number" id="bulkCount" value="5" min="1" max="100">
+                <button onclick="executeBulkCreateBoth()" style="background: white; color: #667eea; font-weight: bold;">
+                    ▶ Execute Both APIs (Create)
+                </button>
+
+                <h3 style="color: white; margin-top: 25px;">Bulk Get Orders</h3>
+                <label style="color: white;">Order IDs (comma-separated):</label>
+                <textarea id="getIds" placeholder="e.g., 1,2,3,4,5"></textarea>
+                <button onclick="executeBulkGetBoth()" style="background: white; color: #667eea; font-weight: bold;">
+                    ▶ Execute Both APIs (Get)
+                </button>
+
+                <h3 style="color: white; margin-top: 25px;">Bulk Delete Orders</h3>
+                <label style="color: white;">Order IDs (comma-separated):</label>
+                <textarea id="deleteIds" placeholder="e.g., 101,102,103,104,105"></textarea>
+                <button onclick="executeBulkDeleteBoth()" style="background: white; color: #667eea; font-weight: bold;">
+                    ▶ Execute Both APIs (Delete)
+                </button>
+            </div>
+
             <!-- REST Section -->
             <div class="card rest-card">
                 <h2>REST API</h2>
-                
-                <h3>Bulk Create Orders</h3>
-                <label>Number of Orders:</label>
-                <input type="number" id="restBulkCount" value="5" min="1" max="100">
-                <button class="rest-btn" onclick="restBulkCreate()">Create Orders (REST)</button>
-                
-                <h3>Bulk Delete Orders</h3>
-                <label>Order IDs (comma-separated):</label>
-                <textarea id="restDeleteIds" placeholder="e.g., 1,2,3,4,5"></textarea>
-                <button class="rest-btn" onclick="restBulkDelete()">Delete Orders (REST)</button>
-                
+
                 <h3>Response</h3>
                 <div id="restResponse" class="response">Response will appear here...</div>
-                
+
                 <div class="stats">
                     <div class="stat-box rest">
                         <div class="stat-label">Response Time</div>
@@ -319,20 +335,10 @@
             <!-- GraphQL Section -->
             <div class="card graphql-card">
                 <h2>GraphQL API</h2>
-                
-                <h3>Bulk Create Orders</h3>
-                <label>Number of Orders:</label>
-                <input type="number" id="graphqlBulkCount" value="5" min="1" max="100">
-                <button class="graphql-btn" onclick="graphqlBulkCreate()">Create Orders (GraphQL)</button>
-                
-                <h3>Bulk Delete Orders</h3>
-                <label>Order IDs (comma-separated):</label>
-                <textarea id="graphqlDeleteIds" placeholder="e.g., 1,2,3,4,5"></textarea>
-                <button class="graphql-btn" onclick="graphqlBulkDelete()">Delete Orders (GraphQL)</button>
-                
+
                 <h3>Response</h3>
                 <div id="graphqlResponse" class="response">Response will appear here...</div>
-                
+
                 <div class="stats">
                     <div class="stat-box graphql">
                         <div class="stat-label">Response Time</div>
@@ -368,10 +374,10 @@
                 <div id="customQueryResponse" class="response">Response will appear here...</div>
             </div>
 
-            <!-- Performance Comparison -->
-            <div class="card full-width">
+            <!-- Performance Comparison - HIDDEN -->
+            <div class="card full-width" style="display: none;">
                 <h2>Performance Comparison</h2>
-                
+
                 <div class="info-box">
                     <h4>Key Advantages of GraphQL</h4>
                     <p>
@@ -381,7 +387,7 @@
                         <strong>Real-time Updates:</strong> Built-in subscription support for real-time data synchronization.
                     </p>
                 </div>
-                
+
                 <table class="comparison-table">
                     <thead>
                         <tr>
@@ -611,6 +617,281 @@
                 document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
             } catch (error) {
                 document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // **NEW: Execute Both APIs in Parallel - Bulk Create**
+        async function executeBulkCreateBoth() {
+            const count = parseInt(document.getElementById('bulkCount').value);
+            const orders = generateOrderData(count);
+
+            // Show loading state
+            document.getElementById('restResponse').textContent = 'Executing...';
+            document.getElementById('graphqlResponse').textContent = 'Executing...';
+
+            // Execute both in parallel
+            const [restResult, graphqlResult] = await Promise.all([
+                executeBulkCreateREST(count, orders),
+                executeBulkCreateGraphQL(count, orders)
+            ]);
+        }
+
+        async function executeBulkCreateREST(count, orders) {
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/orders/bulk`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orders })
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('restResponse').textContent = responseText;
+                document.getElementById('restTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('restRequests').textContent = '1';
+                document.getElementById('restSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('restResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function executeBulkCreateGraphQL(count, orders) {
+            const mutation = `
+                mutation BulkCreateOrders($request: BulkOrderCreateRequestInput!) {
+                    bulkCreateOrders(request: $request) {
+                        successCount
+                        failureCount
+                        errors
+                        createdIds
+                    }
+                }
+            `;
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: mutation,
+                        variables: { request: { orders } }
+                    })
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('graphqlResponse').textContent = responseText;
+                document.getElementById('graphqlTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('graphqlRequests').textContent = '1';
+                document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
+            }
+        }
+
+        // **NEW: Execute Both APIs in Parallel - Bulk Get**
+        async function executeBulkGetBoth() {
+            const idsText = document.getElementById('getIds').value;
+            const orderIds = idsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+            if (orderIds.length === 0) {
+                document.getElementById('restResponse').textContent = 'Please enter valid order IDs';
+                document.getElementById('graphqlResponse').textContent = 'Please enter valid order IDs';
+                return;
+            }
+
+            // Show loading state
+            document.getElementById('restResponse').textContent = 'Executing...';
+            document.getElementById('graphqlResponse').textContent = 'Executing...';
+
+            // Execute both in parallel
+            const [restResult, graphqlResult] = await Promise.all([
+                executeBulkGetREST(orderIds),
+                executeBulkGetGraphQL(orderIds)
+            ]);
+        }
+
+        async function executeBulkGetREST(orderIds) {
+            const startTime = performance.now();
+
+            try {
+                const idsParam = orderIds.join(',');
+                const response = await fetch(`${API_BASE}/api/orders/bulk?ids=${idsParam}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('restResponse').textContent = responseText;
+                document.getElementById('restTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('restRequests').textContent = '1';
+                document.getElementById('restSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('restResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function executeBulkGetGraphQL(orderIds) {
+            const query = `
+                query GetOrdersByIds($ids: [Int!]!) {
+                    ordersByIds(ids: $ids) {
+                        id
+                        customerId
+                        orderDate
+                        status
+                        totalAmount
+                        customer {
+                            id
+                            name
+                            email
+                        }
+                        items {
+                            id
+                            quantity
+                            unitPrice
+                            discount
+                            product {
+                                id
+                                name
+                                price
+                            }
+                        }
+                    }
+                }
+            `;
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        variables: { ids: orderIds }
+                    })
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('graphqlResponse').textContent = responseText;
+                document.getElementById('graphqlTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('graphqlRequests').textContent = '1';
+                document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
+            }
+        }
+
+        // **NEW: Execute Both APIs in Parallel - Bulk Delete**
+        async function executeBulkDeleteBoth() {
+            const idsText = document.getElementById('deleteIds').value;
+            const orderIds = idsText.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+
+            if (orderIds.length === 0) {
+                document.getElementById('restResponse').textContent = 'Please enter valid order IDs';
+                document.getElementById('graphqlResponse').textContent = 'Please enter valid order IDs';
+                return;
+            }
+
+            // Show loading state
+            document.getElementById('restResponse').textContent = 'Executing...';
+            document.getElementById('graphqlResponse').textContent = 'Executing...';
+
+            // Execute both in parallel
+            const [restResult, graphqlResult] = await Promise.all([
+                executeBulkDeleteREST(orderIds),
+                executeBulkDeleteGraphQL(orderIds)
+            ]);
+        }
+
+        async function executeBulkDeleteREST(orderIds) {
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/orders/bulk`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderIds })
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('restResponse').textContent = responseText;
+                document.getElementById('restTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('restRequests').textContent = '1';
+                document.getElementById('restSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('restResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function executeBulkDeleteGraphQL(orderIds) {
+            const mutation = `
+                mutation BulkDeleteOrders($request: BulkOrderDeleteRequestInput!) {
+                    bulkDeleteOrders(request: $request) {
+                        successCount
+                        failureCount
+                        errors
+                        deletedIds
+                    }
+                }
+            `;
+
+            const startTime = performance.now();
+
+            try {
+                const response = await fetch(GRAPHQL_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: mutation,
+                        variables: { request: { orderIds } }
+                    })
+                });
+
+                const endTime = performance.now();
+                const data = await response.json();
+                const responseText = formatJSON(data);
+
+                document.getElementById('graphqlResponse').textContent = responseText;
+                document.getElementById('graphqlTime').textContent = `${(endTime - startTime).toFixed(2)}ms`;
+                document.getElementById('graphqlRequests').textContent = '1';
+                document.getElementById('graphqlSize').textContent = formatSize(responseText.length);
+
+                return { success: true, time: endTime - startTime };
+            } catch (error) {
+                document.getElementById('graphqlResponse').textContent = `Error: ${error.message}`;
+                return { success: false, error: error.message };
             }
         }
 

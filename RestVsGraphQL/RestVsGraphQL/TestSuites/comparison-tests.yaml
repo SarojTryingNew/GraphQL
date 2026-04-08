@@ -97,9 +97,41 @@ tests:
 
   - name: "GraphQL - Bulk Create Orders"
     type: "GraphQL"
-    query: "mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: \"Pending\", items: [{ productId: 1, quantity: 2, discount: 5, notes: [\"Comparison test\"] }] }] }) { successCount failureCount createdIds } }"
+    query: 'mutation { bulkCreateOrders(request: { orders: [{ customerId: 1, status: "Pending", items: [{ productId: 1, quantity: 2, discount: 5, notes: ["Comparison test"] }] }] }) { successCount failureCount createdIds } }'
     assertions:
       statusCode: 200
+
+  - name: "REST - Bulk Delete Orders (Non-Existent IDs)"
+    type: "REST"
+    method: "DELETE"
+    endpoint: "/api/orders/bulk"
+    body:
+      orderIds: [999999, 999998]
+    assertions:
+      statusCode: 200
+
+  - name: "GraphQL - Bulk Delete Orders (Non-Existent IDs)"
+    type: "GraphQL"
+    query: "mutation { bulkDeleteOrders(request: { orderIds: [999999, 999998] }) { successCount failureCount errors deletedIds } }"
+    assertions:
+      statusCode: 200
+
+  - name: "REST - Bulk Delete Orders (Existent IDs)"
+    type: "REST"
+    method: "DELETE"
+    endpoint: "/api/orders/bulk"
+    body:
+      orderIds: [10, 11, 12]
+    assertions:
+      statusCode: 200
+      contains: "successCount"
+
+  - name: "GraphQL - Bulk Delete Orders (Existent IDs)"
+    type: "GraphQL"
+    query: "mutation { bulkDeleteOrders(request: { orderIds: [13, 14, 15] }) { successCount failureCount errors deletedIds } }"
+    assertions:
+      statusCode: 200
+      contains: "bulkDeleteOrders"
 
   # Scenario 5: Multiple Dependent Calls
   - name: "REST - Customer Info (Call 1 of 3)"
