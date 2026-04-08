@@ -160,7 +160,7 @@ public class MetricsController : ControllerBase
         sb.AppendLine($"<p style='margin: 5px 0;'><strong>Report Generated:</strong> {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC</p>");
         sb.AppendLine("</div>");
         sb.AppendLine("<div>");
-        sb.AppendLine("<button class='clear-btn' onclick='clearMetrics()'>🗑️ Clear Metrics & Reset</button>");
+        sb.AppendLine("<button class='clear-btn' onclick='clearMetrics()'>Clear Metrics & Reset</button>");
         sb.AppendLine("<p style='color: #7f8c8d; font-size: 12px; margin-top: 8px; text-align: right;'>Reset all metrics and start fresh testing</p>");
         sb.AppendLine("</div>");
         sb.AppendLine("</div>");
