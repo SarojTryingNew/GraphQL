@@ -46,6 +46,14 @@ public class MetricsCollector
         var payloadSizes = filteredMetrics.Select(m => m.ResponseSizeBytes).ToList();
         var memoryUsages = filteredMetrics.Select(m => m.MemoryUsedBytes).ToList();
 
+        // Fix: Calculate throughput based on actual request time span, not uptime
+        var timeSpanSeconds = filteredMetrics.Count > 1
+            ? (filteredMetrics.Max(m => m.Timestamp) - filteredMetrics.Min(m => m.Timestamp)).TotalSeconds
+            : _uptime.Elapsed.TotalSeconds;
+
+        // Ensure we don't divide by zero
+        if (timeSpanSeconds < 0.001) timeSpanSeconds = 0.001;
+
         return new MetricsSummary
         {
             TotalRequests = filteredMetrics.Count,
@@ -75,10 +83,10 @@ public class MetricsCollector
             MaxMemoryUsedBytes = memoryUsages.Max(),
             TotalMemoryUsedBytes = memoryUsages.Sum(),
 
-            // Throughput
-            UptimeSeconds = _uptime.Elapsed.TotalSeconds,
-            RequestsPerSecond = filteredMetrics.Count / _uptime.Elapsed.TotalSeconds,
-            
+            // Throughput - Fixed to use actual request time span
+            UptimeSeconds = timeSpanSeconds,
+            RequestsPerSecond = filteredMetrics.Count / timeSpanSeconds,
+
             // Endpoint Breakdown
             EndpointMetrics = filteredMetrics
                 .GroupBy(m => m.Endpoint)
@@ -107,7 +115,7 @@ public class MetricsCollector
             GeneratedAt = DateTime.UtcNow,
             TestScenario = _currentTestScenario,
             TestStartTime = _testStartTime,
-            
+
             // Comparative Analysis
             ResponseTimeWinner = restMetrics.AverageResponseTimeMs < graphqlMetrics.AverageResponseTimeMs 
                 ? ApiType.REST : ApiType.GraphQL,
@@ -117,7 +125,10 @@ public class MetricsCollector
                 ? ApiType.REST : ApiType.GraphQL,
             ReliabilityWinner = restMetrics.SuccessRate > graphqlMetrics.SuccessRate 
                 ? ApiType.REST : ApiType.GraphQL,
-            
+            // Fix: Add missing MemoryEfficiencyWinner
+            MemoryEfficiencyWinner = restMetrics.AverageMemoryUsedBytes < graphqlMetrics.AverageMemoryUsedBytes 
+                ? ApiType.REST : ApiType.GraphQL,
+
             // Performance Improvements
             ResponseTimeImprovement = CalculateImprovement(
                 restMetrics.AverageResponseTimeMs, 
@@ -127,16 +138,25 @@ public class MetricsCollector
                 graphqlMetrics.AverageResponseSizeBytes),
             ThroughputImprovement = CalculateImprovement(
                 graphqlMetrics.RequestsPerSecond, 
-                restMetrics.RequestsPerSecond)
+                restMetrics.RequestsPerSecond),
+            // Fix: Add missing MemoryEfficiencyImprovement
+            MemoryEfficiencyImprovement = CalculateImprovement(
+                restMetrics.AverageMemoryUsedBytes, 
+                graphqlMetrics.AverageMemoryUsedBytes)
         };
     }
 
     private double GetPercentile(List<double> sortedValues, int percentile)
     {
         if (!sortedValues.Any()) return 0;
-        
+
+        // Calculate percentile index using nearest-rank method
         var index = (int)Math.Ceiling(percentile / 100.0 * sortedValues.Count) - 1;
-        return sortedValues[Math.Max(0, Math.Min(index, sortedValues.Count - 1))];
+
+        // Clamp index to valid range
+        index = Math.Clamp(index, 0, sortedValues.Count - 1);
+
+        return sortedValues[index];
     }
 
     private double CalculateImprovement(double baseline, double comparison)
@@ -150,6 +170,18 @@ public class MetricsCollector
         _metrics.Clear();
         _requestCounts.Clear();
         _errorCounts.Clear();
+    }
+
+    public List<ApiMetric> GetCapturedExamples()
+    {
+        // Return metrics that have captured request/response bodies
+        return _metrics
+            .Where(m => !string.IsNullOrEmpty(m.RequestBody) || !string.IsNullOrEmpty(m.ResponseBody))
+            .Where(m => !m.Endpoint.StartsWith("/api/metrics", StringComparison.OrdinalIgnoreCase))
+            .OrderBy(m => m.ApiType)
+            .ThenBy(m => m.Endpoint)
+            .ThenBy(m => m.Timestamp)
+            .ToList();
     }
 }
 
@@ -166,6 +198,10 @@ public class ApiMetric
     public bool Success { get; set; }
     public string? ErrorMessage { get; set; }
     public long MemoryUsedBytes { get; set; }
+
+    // Request/Response capture (only stored for sample requests)
+    public string? RequestBody { get; set; }
+    public string? ResponseBody { get; set; }
 }
 
 public class MetricsSummary

@@ -26,17 +26,10 @@ function Open-MetricsReport {
     Write-Host ""
     Write-Host "Opening metrics report in browser..." -ForegroundColor Green
     Start-Process "http://localhost:5072/api/metrics/report"
-    Start-Sleep -Seconds 1
-}
-
-function Ask-Continue {
+    Start-Sleep -Seconds 2
     Write-Host ""
-    Write-Host "================================================================" -ForegroundColor Yellow
-    Write-Host "  R - Run another test" -ForegroundColor Green
-    Write-Host "  E - Exit" -ForegroundColor Red
-    Write-Host "================================================================" -ForegroundColor Yellow
-    $continue = Read-Host "Your choice (R/E)"
-    return $continue.ToUpper() -eq "R"
+    Write-Host "Press any key to return to menu..." -ForegroundColor Yellow
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
 }
 
 $keepRunning = $true
@@ -47,11 +40,23 @@ while ($keepRunning) {
     switch ($choice) {
         "1" { 
             Write-Host ""
+            # Set scenario before running test
+            Write-Host "Preparing test..." -ForegroundColor Cyan
+            try {
+                $scenarioName = "Quick Test (10 iterations + 100 bulk orders)"
+                $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+            }
+            Write-Host ""
+
             & "$performanceTestsPath\quick-test.ps1"
             Open-MetricsReport
-            $keepRunning = Ask-Continue
         }
-        "2" { 
+        "2" {
             Write-Host ""
             Write-Host "================================================================" -ForegroundColor Cyan
             Write-Host "     Standard Load Test - Comprehensive Testing" -ForegroundColor Cyan
@@ -60,6 +65,19 @@ while ($keepRunning) {
             Write-Host "Test Plan:" -ForegroundColor Yellow
             Write-Host "  - Standard Tests: 100 iterations per scenario" -ForegroundColor White
             Write-Host "  - Bulk Operations: 10 iterations × 50 orders = 500 orders" -ForegroundColor White
+            Write-Host ""
+
+            # Set scenario before running tests
+            Write-Host "Preparing test..." -ForegroundColor Cyan
+            try {
+                $scenarioName = "Standard Load Test (100 iterations + 500 bulk orders)"
+                $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+            }
             Write-Host ""
 
             # Run standard load tests
@@ -84,9 +102,8 @@ while ($keepRunning) {
             Write-Host ""
 
             Open-MetricsReport
-            $keepRunning = Ask-Continue
         }
-        "3" { 
+        "3" {
             Write-Host ""
             Write-Host "================================================================" -ForegroundColor Cyan
             Write-Host "     Bulk Operations Test - Configuration" -ForegroundColor Cyan
@@ -160,11 +177,22 @@ while ($keepRunning) {
                 Write-Host "  Total orders:    $($iterations * $ordersPerBulk)" -ForegroundColor White
                 Write-Host ""
 
+                # Set scenario before running test
+                Write-Host "Preparing test..." -ForegroundColor Cyan
+                try {
+                    $scenarioName = "Bulk Operations Test ($iterations iterations × $ordersPerBulk orders)"
+                    $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                    Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                    Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                    Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+                } catch {
+                    Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+                }
+                Write-Host ""
+
                 & "$performanceTestsPath\load-test-bulk.ps1" -Iterations $iterations -OrdersPerBulk $ordersPerBulk
                 Open-MetricsReport
             }
-
-            $keepRunning = Ask-Continue
         }
         "4" {
             Write-Host ""
@@ -173,10 +201,22 @@ while ($keepRunning) {
             if ([string]::IsNullOrWhiteSpace($iterations)) { $iterations = 100 }
             else { $iterations = [int]$iterations }
 
+            # Set scenario before running test
+            Write-Host ""
+            Write-Host "Preparing test..." -ForegroundColor Cyan
+            try {
+                $scenarioName = "Nested Object Graph Test ($iterations iterations)"
+                $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+            }
+
             Write-Host ""
             & "$performanceTestsPath\load-test-nested.ps1" -Iterations $iterations
             Open-MetricsReport
-            $keepRunning = Ask-Continue
         }
         "5" {
             Write-Host ""
@@ -185,10 +225,22 @@ while ($keepRunning) {
             if ([string]::IsNullOrWhiteSpace($iterations)) { $iterations = 100 }
             else { $iterations = [int]$iterations }
 
+            # Set scenario before running test
+            Write-Host ""
+            Write-Host "Preparing test..." -ForegroundColor Cyan
+            try {
+                $scenarioName = "Dashboard Aggregation Test ($iterations iterations)"
+                $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+            }
+
             Write-Host ""
             & "$performanceTestsPath\load-test-dashboard.ps1" -Iterations $iterations
             Open-MetricsReport
-            $keepRunning = Ask-Continue
         }
         "6" {
             Write-Host ""
@@ -198,12 +250,24 @@ while ($keepRunning) {
             if ([string]::IsNullOrWhiteSpace($iterations)) { $iterations = 100 }
             else { $iterations = [int]$iterations }
 
+            # Set scenario before running test
+            Write-Host ""
+            Write-Host "Preparing test..." -ForegroundColor Cyan
+            try {
+                $scenarioName = "Multiple Dependent Calls Test ($iterations iterations)"
+                $scenarioBody = @{ scenarioName = $scenarioName } | ConvertTo-Json
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/reset" -Method Post -ErrorAction SilentlyContinue | Out-Null
+                Invoke-RestMethod -Uri "http://localhost:5072/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction SilentlyContinue | Out-Null
+                Write-Host "Test scenario set: $scenarioName" -ForegroundColor Green
+            } catch {
+                Write-Host "Warning: Could not set scenario" -ForegroundColor Yellow
+            }
+
             Write-Host ""
             & "$performanceTestsPath\load-test-multiple.ps1" -Iterations $iterations
             Open-MetricsReport
-            $keepRunning = Ask-Continue
         }
-        "0" { 
+        "0" {
             Write-Host ""
             Write-Host "Goodbye!" -ForegroundColor Green
             $keepRunning = $false

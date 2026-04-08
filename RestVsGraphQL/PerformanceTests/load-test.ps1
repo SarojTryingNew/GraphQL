@@ -21,27 +21,7 @@ catch {
     exit 1
 }
 
-# Reset metrics
-Write-Host "`nResetting metrics..." -ForegroundColor Yellow
-try {
-    $null = Invoke-RestMethod -Uri "$BaseUrl/api/metrics/reset" -Method Post -ErrorAction Stop
-    Write-Host "Metrics reset successfully" -ForegroundColor Green
-}
-catch {
-    Write-Host "Warning: Could not reset metrics" -ForegroundColor Yellow
-}
-
-# Set test scenario
-Write-Host "Setting test scenario..." -ForegroundColor Yellow
-try {
-    $testType = if ($Iterations -eq 10) { "Quick Test" } elseif ($Iterations -eq 100) { "Standard Load Test" } else { "Custom Test" }
-    $scenarioBody = @{ scenarioName = "$testType ($Iterations iterations)" } | ConvertTo-Json
-    $null = Invoke-RestMethod -Uri "$BaseUrl/api/metrics/scenario" -Method Post -Body $scenarioBody -ContentType "application/json" -ErrorAction Stop
-    Write-Host "Test scenario set" -ForegroundColor Green
-}
-catch {
-    Write-Host "Warning: Could not set test scenario" -ForegroundColor Yellow
-}
+# Note: Metrics reset and scenario setting handled by launch-tests.ps1
 
 Write-Host ""
 Write-Host "Test Configuration:" -ForegroundColor Yellow
