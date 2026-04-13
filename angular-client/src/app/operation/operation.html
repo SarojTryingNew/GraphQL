@@ -60,7 +60,7 @@
     >
       <span *ngIf="!running">🚀 Run Comparison</span>
       <span *ngIf="running" class="loading-text">
-        <span class="dot-spinner"></span> Running both REST & GraphQL...
+        <span class="dot-spinner"></span> Running REST Direct & REST+GraphQL...
       </span>
     </button>
   </div>
@@ -72,11 +72,11 @@
 
   <!-- Results Panel -->
   <div *ngIf="result" class="results-section">
-    
+
     <!-- Winner Banner -->
     <div class="winner-banner"
-         [class.rest-win]="result.winner === 'REST'"
-         [class.graphql-win]="result.winner === 'GraphQL'"
+         [class.rest-win]="result.winner === 'REST Direct'"
+         [class.graphql-win]="result.winner === 'REST+GraphQL'"
          [class.tie-win]="result.winner === 'Tie'">
       <span class="trophy">🏆</span>
       <div class="winner-content">
@@ -87,29 +87,29 @@
 
     <!-- KPI Comparison Table -->
     <div class="kpi-section">
-      <h2>📊 Performance Metrics</h2>
-      
+      <h2>📊 Performance Metrics: REST Direct vs REST+GraphQL</h2>
+
       <div class="comparison-table">
         <!-- Header -->
         <div class="table-header">
           <span class="col-metric">Metric</span>
-          <span class="col-api rest-col">REST API</span>
-          <span class="col-api graphql-col">GraphQL API</span>
+          <span class="col-api rest-col">REST Direct (DataStore)</span>
+          <span class="col-api graphql-col">REST + GraphQL Backend</span>
           <span class="col-winner">Winner</span>
         </div>
 
         <!-- Metric Rows -->
         <div *ngFor="let m of result.metrics" class="table-row">
           <span class="col-metric">{{ m.label }}</span>
-          <span class="col-val" [class.val-win]="m.winner === 'REST'">
-            {{ m.restValue }}
+          <span class="col-val" [class.val-win]="m.winner === 'REST Direct'">
+            {{ m.restDirectValue }}
           </span>
-          <span class="col-val" [class.val-win]="m.winner === 'GraphQL'">
-            {{ m.graphqlValue }}
+          <span class="col-val" [class.val-win]="m.winner === 'REST+GraphQL'">
+            {{ m.restGraphQLValue }}
           </span>
           <span class="col-winner">
-            <span *ngIf="m.winner === 'REST'" class="badge rest-badge">REST ✓</span>
-            <span *ngIf="m.winner === 'GraphQL'" class="badge graphql-badge">GraphQL ✓</span>
+            <span *ngIf="m.winner === 'REST Direct'" class="badge rest-badge">REST Direct ✓</span>
+            <span *ngIf="m.winner === 'REST+GraphQL'" class="badge graphql-badge">REST+GraphQL ✓</span>
             <span *ngIf="m.winner === 'Tie'" class="badge tie-badge">Tie</span>
           </span>
         </div>
@@ -118,16 +118,16 @@
         <div class="table-row status-row">
           <span class="col-metric"><strong>Status</strong></span>
           <span class="col-val"
-                [class.status-ok]="result.rest.success"
-                [class.status-fail]="!result.rest.success">
-            {{ result.rest.success ? '✅ Success' : '❌ Failed' }}
-            <span *ngIf="result.rest.error" class="error-detail">({{ result.rest.error }})</span>
+                [class.status-ok]="result.restDirect.success"
+                [class.status-fail]="!result.restDirect.success">
+            {{ result.restDirect.success ? '✅ Success' : '❌ Failed' }}
+            <span *ngIf="result.restDirect.error" class="error-detail">({{ result.restDirect.error }})</span>
           </span>
           <span class="col-val"
-                [class.status-ok]="result.graphql.success"
-                [class.status-fail]="!result.graphql.success">
-            {{ result.graphql.success ? '✅ Success' : '❌ Failed' }}
-            <span *ngIf="result.graphql.error" class="error-detail">({{ result.graphql.error }})</span>
+                [class.status-ok]="result.restWithGraphQL.success"
+                [class.status-fail]="!result.restWithGraphQL.success">
+            {{ result.restWithGraphQL.success ? '✅ Success' : '❌ Failed' }}
+            <span *ngIf="result.restWithGraphQL.error" class="error-detail">({{ result.restWithGraphQL.error }})</span>
           </span>
           <span class="col-winner"></span>
         </div>
@@ -137,35 +137,35 @@
     <!-- Request & Response Payloads -->
     <div class="payloads-section">
       <h2>📄 Request & Response Payloads</h2>
-      
+
       <div class="payload-grid">
-        <!-- REST API Payloads -->
+        <!-- REST Direct API Payloads -->
         <div class="payload-card rest-card">
-          <h3>🔵 REST API</h3>
-          
+          <h3>🔵 REST Direct API</h3>
+
           <div class="payload-block">
             <h4>Request</h4>
-            <pre class="payload-content">{{ result.rest.requestPayload | json }}</pre>
+            <pre class="payload-content">{{ result.restDirect.requestPayload | json }}</pre>
           </div>
-          
+
           <div class="payload-block">
             <h4>Response</h4>
-            <pre class="payload-content">{{ result.rest.responsePayload | json }}</pre>
+            <pre class="payload-content">{{ result.restDirect.responsePayload | json }}</pre>
           </div>
         </div>
 
-        <!-- GraphQL API Payloads -->
+        <!-- REST+GraphQL API Payloads -->
         <div class="payload-card graphql-card">
-          <h3>🟣 GraphQL API</h3>
-          
+          <h3>🟣 REST + GraphQL Backend</h3>
+
           <div class="payload-block">
             <h4>Request</h4>
-            <pre class="payload-content">{{ result.graphql.requestPayload | json }}</pre>
+            <pre class="payload-content">{{ result.restWithGraphQL.requestPayload | json }}</pre>
           </div>
-          
+
           <div class="payload-block">
             <h4>Response</h4>
-            <pre class="payload-content">{{ result.graphql.responsePayload | json }}</pre>
+            <pre class="payload-content">{{ result.restWithGraphQL.responsePayload | json }}</pre>
           </div>
         </div>
       </div>

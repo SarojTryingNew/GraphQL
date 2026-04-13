@@ -105,44 +105,53 @@ public class MetricsCollector
 
     public ComparisonReport GetComparisonReport()
     {
+        // Get metrics for legacy REST and GraphQL (for backward compatibility)
         var restMetrics = GetSummary(ApiType.REST);
         var graphqlMetrics = GetSummary(ApiType.GraphQL);
 
+        // Get metrics for new comparison: Direct REST vs REST with GraphQL
+        var restDirectMetrics = GetSummary(ApiType.RESTDirect);
+        var restWithGraphQLMetrics = GetSummary(ApiType.RESTWithGraphQL);
+
+        // If new metrics exist, use them; otherwise fall back to legacy
+        var restToCompare = restDirectMetrics.TotalRequests > 0 ? restDirectMetrics : restMetrics;
+        var graphqlToCompare = restWithGraphQLMetrics.TotalRequests > 0 ? restWithGraphQLMetrics : graphqlMetrics;
+
         return new ComparisonReport
         {
-            RestMetrics = restMetrics,
-            GraphQLMetrics = graphqlMetrics,
+            RestMetrics = restToCompare,
+            GraphQLMetrics = graphqlToCompare,
+            RESTDirectMetrics = restDirectMetrics,
+            RESTWithGraphQLMetrics = restWithGraphQLMetrics,
             GeneratedAt = DateTime.UtcNow,
             TestScenario = _currentTestScenario,
             TestStartTime = _testStartTime,
 
             // Comparative Analysis
-            ResponseTimeWinner = restMetrics.AverageResponseTimeMs < graphqlMetrics.AverageResponseTimeMs 
-                ? ApiType.REST : ApiType.GraphQL,
-            PayloadSizeWinner = restMetrics.AverageResponseSizeBytes < graphqlMetrics.AverageResponseSizeBytes 
-                ? ApiType.REST : ApiType.GraphQL,
-            ThroughputWinner = restMetrics.RequestsPerSecond > graphqlMetrics.RequestsPerSecond 
-                ? ApiType.REST : ApiType.GraphQL,
-            ReliabilityWinner = restMetrics.SuccessRate > graphqlMetrics.SuccessRate 
-                ? ApiType.REST : ApiType.GraphQL,
-            // Fix: Add missing MemoryEfficiencyWinner
-            MemoryEfficiencyWinner = restMetrics.AverageMemoryUsedBytes < graphqlMetrics.AverageMemoryUsedBytes 
-                ? ApiType.REST : ApiType.GraphQL,
+            ResponseTimeWinner = restToCompare.AverageResponseTimeMs < graphqlToCompare.AverageResponseTimeMs 
+                ? ApiType.RESTDirect : ApiType.RESTWithGraphQL,
+            PayloadSizeWinner = restToCompare.AverageResponseSizeBytes < graphqlToCompare.AverageResponseSizeBytes 
+                ? ApiType.RESTDirect : ApiType.RESTWithGraphQL,
+            ThroughputWinner = restToCompare.RequestsPerSecond > graphqlToCompare.RequestsPerSecond 
+                ? ApiType.RESTDirect : ApiType.RESTWithGraphQL,
+            ReliabilityWinner = restToCompare.SuccessRate > graphqlToCompare.SuccessRate 
+                ? ApiType.RESTDirect : ApiType.RESTWithGraphQL,
+            MemoryEfficiencyWinner = restToCompare.AverageMemoryUsedBytes < graphqlToCompare.AverageMemoryUsedBytes 
+                ? ApiType.RESTDirect : ApiType.RESTWithGraphQL,
 
             // Performance Improvements
             ResponseTimeImprovement = CalculateImprovement(
-                restMetrics.AverageResponseTimeMs, 
-                graphqlMetrics.AverageResponseTimeMs),
+                restToCompare.AverageResponseTimeMs, 
+                graphqlToCompare.AverageResponseTimeMs),
             PayloadSizeImprovement = CalculateImprovement(
-                restMetrics.AverageResponseSizeBytes, 
-                graphqlMetrics.AverageResponseSizeBytes),
+                restToCompare.AverageResponseSizeBytes, 
+                graphqlToCompare.AverageResponseSizeBytes),
             ThroughputImprovement = CalculateImprovement(
-                graphqlMetrics.RequestsPerSecond, 
-                restMetrics.RequestsPerSecond),
-            // Fix: Add missing MemoryEfficiencyImprovement
+                graphqlToCompare.RequestsPerSecond, 
+                restToCompare.RequestsPerSecond),
             MemoryEfficiencyImprovement = CalculateImprovement(
-                restMetrics.AverageMemoryUsedBytes, 
-                graphqlMetrics.AverageMemoryUsedBytes)
+                restToCompare.AverageMemoryUsedBytes, 
+                graphqlToCompare.AverageMemoryUsedBytes)
         };
     }
 
@@ -174,9 +183,9 @@ public class MetricsCollector
 
     public List<ApiMetric> GetCapturedExamples()
     {
-        // Return metrics that have captured request/response bodies
+        // Return ALL metrics (requests/responses), excluding only the metrics endpoints
+        // GET requests typically have no request body, but we still want to show them
         return _metrics
-            .Where(m => !string.IsNullOrEmpty(m.RequestBody) || !string.IsNullOrEmpty(m.ResponseBody))
             .Where(m => !m.Endpoint.StartsWith("/api/metrics", StringComparison.OrdinalIgnoreCase))
             .OrderBy(m => m.ApiType)
             .ThenBy(m => m.Endpoint)
@@ -250,7 +259,9 @@ public class ComparisonReport
     public DateTime TestStartTime { get; set; }
     public MetricsSummary RestMetrics { get; set; } = new();
     public MetricsSummary GraphQLMetrics { get; set; } = new();
-    
+    public MetricsSummary RESTDirectMetrics { get; set; } = new();
+    public MetricsSummary RESTWithGraphQLMetrics { get; set; } = new();
+
     public ApiType ResponseTimeWinner { get; set; }
     public ApiType PayloadSizeWinner { get; set; }
     public ApiType ThroughputWinner { get; set; }
@@ -265,6 +276,8 @@ public class ComparisonReport
 
 public enum ApiType
 {
-    REST,
-    GraphQL
+    REST,           // Legacy - kept for backward compatibility
+    GraphQL,
+    RESTDirect,     // REST API calling DataStore directly
+    RESTWithGraphQL // REST API using GraphQL as internal layer
 }

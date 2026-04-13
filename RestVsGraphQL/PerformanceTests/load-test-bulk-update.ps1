@@ -6,7 +6,7 @@ param(
 )
 
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "     Bulk UPDATE Operations - REST vs GraphQL" -ForegroundColor Cyan
+Write-Host "   Bulk UPDATE Operations - REST Direct vs REST+GraphQL" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -66,16 +66,16 @@ function Invoke-BulkTest {
     Write-Host ""
 }
 
-# Test 1: REST Bulk Update
-Write-Host "`n=== Test 1: REST Bulk Update Orders ===" -ForegroundColor White
+# Test 1: REST Direct Bulk Update
+Write-Host "`n=== Test 1: REST Direct - Bulk Update Orders ===" -ForegroundColor White
 
-Invoke-BulkTest -Name "REST - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
+Invoke-BulkTest -Name "REST Direct - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
     param($url, $ordersCount)
-    
+
     # Get recent orders
     $allOrders = Invoke-RestMethod -Uri "$url/api/orders" -Method Get -ErrorAction Stop
     $recentOrders = $allOrders | Select-Object -First $ordersCount
-    
+
     $updates = @()
     foreach ($order in $recentOrders) {
         $updates += @{
@@ -83,23 +83,21 @@ Invoke-BulkTest -Name "REST - Bulk Update ($OrdersPerBulk orders per request)" -
             status = @("Pending", "Processing", "Shipped", "Completed")[(Get-Random -Minimum 0 -Maximum 4)]
         }
     }
-    
+
     $bulkUpdateData = @{ orders = $updates } | ConvertTo-Json -Depth 10
     Invoke-RestMethod -Uri "$url/api/orders/bulk" -Method Put -Body $bulkUpdateData -ContentType "application/json" -ErrorAction Stop
 }
 
-# Test 2: GraphQL Bulk Update
-Write-Host "`n=== Test 2: GraphQL Bulk Update Orders ===" -ForegroundColor White
+# Test 2: REST with GraphQL Backend Bulk Update
+Write-Host "`n=== Test 2: REST with GraphQL Backend - Bulk Update Orders ===" -ForegroundColor White
 
-Invoke-BulkTest -Name "GraphQL - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
+Invoke-BulkTest -Name "REST with GraphQL - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
     param($url, $ordersCount)
-    
-    # Get recent orders via GraphQL
-    $query = "{ orders { id status } }"
-    $graphqlQuery = @{ query = $query } | ConvertTo-Json
-    $ordersResponse = Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlQuery -ContentType "application/json" -ErrorAction Stop
-    $recentOrders = $ordersResponse.data.orders | Select-Object -First $ordersCount
-    
+
+    # Get recent orders
+    $allOrders = Invoke-RestMethod -Uri "$url/api/graphql-backend/orders" -Method Get -ErrorAction Stop
+    $recentOrders = $allOrders | Select-Object -First $ordersCount
+
     $updates = @()
     foreach ($order in $recentOrders) {
         $updates += @{
@@ -107,12 +105,9 @@ Invoke-BulkTest -Name "GraphQL - Bulk Update ($OrdersPerBulk orders per request)
             status = @("Pending", "Processing", "Shipped", "Completed")[(Get-Random -Minimum 0 -Maximum 4)]
         }
     }
-    
-    $mutation = "mutation(`$request: BulkOrderUpdateRequestInput!) { bulkUpdateOrders(request: `$request) { successCount failureCount errors } }"
-    $variables = @{ request = @{ orders = $updates } }
-    $graphqlRequest = @{ query = $mutation; variables = $variables } | ConvertTo-Json -Depth 10
-    
-    Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlRequest -ContentType "application/json" -ErrorAction Stop
+
+    $bulkUpdateData = @{ orders = $updates } | ConvertTo-Json -Depth 10
+    Invoke-RestMethod -Uri "$url/api/graphql-backend/orders/bulk" -Method Put -Body $bulkUpdateData -ContentType "application/json" -ErrorAction Stop
 }
 
 # Collect and Display Results
@@ -122,20 +117,21 @@ Start-Sleep -Seconds 2
 
 try {
     $comparison = Invoke-RestMethod -Uri "$BaseUrl/api/metrics/comparison" -Method Get -ErrorAction Stop
-    
+
     Write-Host "`n================================================================" -ForegroundColor Green
-    Write-Host "           BULK UPDATE - KPI COMPARISON RESULTS" -ForegroundColor Green
+    Write-Host "     BULK UPDATE - KPI COMPARISON RESULTS" -ForegroundColor Green
+    Write-Host "     REST Direct vs REST with GraphQL Backend" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
-    
+
     Write-Host "`nWINNERS:" -ForegroundColor Yellow
     Write-Host "  Response Time:  $($comparison.responseTimeWinner)" -ForegroundColor Green
     Write-Host "  Payload Size:   $($comparison.payloadSizeWinner)" -ForegroundColor Green
     Write-Host "  Throughput:     $($comparison.throughputWinner)" -ForegroundColor Green
-    
+
     # Calculate improvements
     $rtImprovement = [Math]::Abs($comparison.responseTimeImprovement)
     $psImprovement = [Math]::Abs($comparison.payloadSizeImprovement)
-    
+
     Write-Host "`nIMPROVEMENTS:" -ForegroundColor Yellow
     Write-Host "  Response Time:  $($rtImprovement.ToString('F2'))% " -NoNewline
     if ($comparison.responseTimeImprovement -gt 0) {
@@ -143,37 +139,41 @@ try {
     } else {
         Write-Host "slower" -ForegroundColor Red
     }
-    
+
     Write-Host "  Payload Size:   $($psImprovement.ToString('F2'))% " -NoNewline
     if ($comparison.payloadSizeImprovement -gt 0) {
         Write-Host "smaller" -ForegroundColor Green
     } else {
         Write-Host "larger" -ForegroundColor Red
     }
-    
-    Write-Host "`nREST API - BULK UPDATE:" -ForegroundColor Red
-    Write-Host "  Total Requests:     $($comparison.restMetrics.totalRequests)"
-    Write-Host "  Success Rate:       $($comparison.restMetrics.successRate.ToString('F2'))%"
-    Write-Host "  Avg Response Time:  $($comparison.restMetrics.averageResponseTimeMs.ToString('F2')) ms"
-    Write-Host "  P95 Response Time:  $($comparison.restMetrics.p95ResponseTimeMs.ToString('F2')) ms"
-    Write-Host "  Avg Payload:        $($comparison.restMetrics.averageResponseSizeBytes.ToString('F0')) bytes"
-    Write-Host "  Throughput:         $($comparison.restMetrics.requestsPerSecond.ToString('F2')) req/s"
-    
-    Write-Host "`nGraphQL API - BULK UPDATE:" -ForegroundColor Magenta
-    Write-Host "  Total Requests:     $($comparison.graphQLMetrics.totalRequests)"
-    Write-Host "  Success Rate:       $($comparison.graphQLMetrics.successRate.ToString('F2'))%"
-    Write-Host "  Avg Response Time:  $($comparison.graphQLMetrics.averageResponseTimeMs.ToString('F2')) ms"
-    Write-Host "  P95 Response Time:  $($comparison.graphQLMetrics.p95ResponseTimeMs.ToString('F2')) ms"
-    Write-Host "  Avg Payload:        $($comparison.graphQLMetrics.averageResponseSizeBytes.ToString('F0')) bytes"
-    Write-Host "  Throughput:         $($comparison.graphQLMetrics.requestsPerSecond.ToString('F2')) req/s"
-    
+
+    Write-Host "`nREST Direct API (DataStore) - BULK UPDATE:" -ForegroundColor Red
+    Write-Host "  Total Requests:     $($comparison.restDirectMetrics.totalRequests)"
+    Write-Host "  Success Rate:       $($comparison.restDirectMetrics.successRate.ToString('F2'))%"
+    Write-Host "  Avg Response Time:  $($comparison.restDirectMetrics.averageResponseTimeMs.ToString('F2')) ms"
+    Write-Host "  P95 Response Time:  $($comparison.restDirectMetrics.p95ResponseTimeMs.ToString('F2')) ms"
+    Write-Host "  Avg Payload:        $($comparison.restDirectMetrics.averageResponseSizeBytes.ToString('F0')) bytes"
+    Write-Host "  Throughput:         $($comparison.restDirectMetrics.requestsPerSecond.ToString('F2')) req/s"
+
+    Write-Host "`nREST with GraphQL Backend - BULK UPDATE:" -ForegroundColor Magenta
+    Write-Host "  Total Requests:     $($comparison.restWithGraphQLMetrics.totalRequests)"
+    Write-Host "  Success Rate:       $($comparison.restWithGraphQLMetrics.successRate.ToString('F2'))%"
+    Write-Host "  Avg Response Time:  $($comparison.restWithGraphQLMetrics.averageResponseTimeMs.ToString('F2')) ms"
+    Write-Host "  P95 Response Time:  $($comparison.restWithGraphQLMetrics.p95ResponseTimeMs.ToString('F2')) ms"
+    Write-Host "  Avg Payload:        $($comparison.restWithGraphQLMetrics.averageResponseSizeBytes.ToString('F0')) bytes"
+    Write-Host "  Throughput:         $($comparison.restWithGraphQLMetrics.requestsPerSecond.ToString('F2')) req/s"
+
     # Calculate bulk operation efficiency
     $totalOrders = $Iterations * $OrdersPerBulk
     Write-Host "`nBULK UPDATE EFFICIENCY:" -ForegroundColor Cyan
     Write-Host "  Total Orders Updated: ~$totalOrders"
-    Write-Host "  REST Efficiency:      $(($totalOrders / $comparison.restMetrics.totalRequests).ToString('F2')) orders/request"
-    Write-Host "  GraphQL Efficiency:   $(($totalOrders / $comparison.graphQLMetrics.totalRequests).ToString('F2')) orders/request"
-    
+    if ($comparison.restDirectMetrics.totalRequests -gt 0) {
+        Write-Host "  REST Direct Efficiency:      $(($totalOrders / $comparison.restDirectMetrics.totalRequests).ToString('F2')) orders/request"
+    }
+    if ($comparison.restWithGraphQLMetrics.totalRequests -gt 0) {
+        Write-Host "  REST+GraphQL Efficiency:     $(($totalOrders / $comparison.restWithGraphQLMetrics.totalRequests).ToString('F2')) orders/request"
+    }
+
     Write-Host "`nFull HTML Report: $BaseUrl/api/metrics/report" -ForegroundColor Cyan
 }
 catch {

@@ -154,7 +154,8 @@ public class MetricsController : ControllerBase
 
         sb.AppendLine("<div class='header-controls'>");
         sb.AppendLine("<div>");
-        sb.AppendLine($"<h1 style='margin: 0;'>REST vs GraphQL - KPI & NFR Comparison Report</h1>");
+        sb.AppendLine($"<h1 style='margin: 0;'>REST Direct vs REST+GraphQL Backend - Performance Comparison</h1>");
+        sb.AppendLine($"<p style='margin: 5px 0;'><strong>Architecture:</strong> Comparing REST calling DataStore directly vs REST using GraphQL as internal layer</p>");
         sb.AppendLine($"<p style='margin: 5px 0;'><strong>Test Scenario:</strong> {report.TestScenario}</p>");
         sb.AppendLine($"<p style='margin: 5px 0;'><strong>Test Started:</strong> {report.TestStartTime:yyyy-MM-dd HH:mm:ss} UTC</p>");
         sb.AppendLine($"<p style='margin: 5px 0;'><strong>Report Generated:</strong> {report.GeneratedAt:yyyy-MM-dd HH:mm:ss} UTC</p>");
@@ -169,33 +170,37 @@ public class MetricsController : ControllerBase
         sb.AppendLine("<div class='summary-box'>");
         sb.AppendLine("<h3>Executive Summary</h3>");
 
+        // Use the new metrics properties with fallback to old ones for backward compatibility
+        var restDirectMetrics = report.RESTDirectMetrics.TotalRequests > 0 ? report.RESTDirectMetrics : report.RestMetrics;
+        var restGraphQLMetrics = report.RESTWithGraphQLMetrics.TotalRequests > 0 ? report.RESTWithGraphQLMetrics : report.GraphQLMetrics;
+
         // Response Time Winner
         var responseTimeWinner = Math.Abs(report.ResponseTimeImprovement) < 0.01 
-            ? "REST & GraphQL (Tie)" 
+            ? "Both approaches (Tie)" 
             : $"{report.ResponseTimeWinner} ({Math.Abs(report.ResponseTimeImprovement):F2}% {(report.ResponseTimeImprovement > 0 ? "faster" : "slower")})";
         sb.AppendLine($"<p><strong>Response Time Winner:</strong> {responseTimeWinner}</p>");
 
         // Payload Size Winner
         var payloadSizeWinner = Math.Abs(report.PayloadSizeImprovement) < 0.01 
-            ? "REST & GraphQL (Tie)" 
+            ? "Both approaches (Tie)" 
             : $"{report.PayloadSizeWinner} ({Math.Abs(report.PayloadSizeImprovement):F2}% {(report.PayloadSizeImprovement > 0 ? "smaller" : "larger")})";
         sb.AppendLine($"<p><strong>Payload Size Winner:</strong> {payloadSizeWinner}</p>");
 
         // Memory Efficiency Winner
         var memoryWinner = Math.Abs(report.MemoryEfficiencyImprovement) < 0.01 
-            ? "REST & GraphQL (Tie)" 
+            ? "Both approaches (Tie)" 
             : $"{report.MemoryEfficiencyWinner} ({Math.Abs(report.MemoryEfficiencyImprovement):F2}% {(report.MemoryEfficiencyImprovement > 0 ? "less memory" : "more memory")})";
         sb.AppendLine($"<p><strong>Memory Efficiency Winner:</strong> {memoryWinner}</p>");
 
         // Throughput Winner
         var throughputWinner = Math.Abs(report.ThroughputImprovement) < 0.01 
-            ? "REST & GraphQL (Tie)" 
+            ? "Both approaches (Tie)" 
             : $"{report.ThroughputWinner} ({Math.Abs(report.ThroughputImprovement):F2}% {(report.ThroughputImprovement > 0 ? "higher" : "lower")})";
         sb.AppendLine($"<p><strong>Throughput Winner:</strong> {throughputWinner}</p>");
 
         // Reliability Winner
-        var reliabilityWinner = report.RestMetrics.SuccessRate == report.GraphQLMetrics.SuccessRate 
-            ? "REST & GraphQL (Tie)" 
+        var reliabilityWinner = restDirectMetrics.SuccessRate == restGraphQLMetrics.SuccessRate 
+            ? "Both approaches (Tie)" 
             : report.ReliabilityWinner.ToString();
         sb.AppendLine($"<p><strong>Reliability Winner:</strong> {reliabilityWinner}</p>");
 
@@ -203,77 +208,77 @@ public class MetricsController : ControllerBase
 
         // KPI Comparison
         sb.AppendLine("<h2>Key Performance Indicators (KPIs)</h2>");
-        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> KPIs provide a high-level overview of API performance. Total requests show workload volume, success rate indicates reliability, response time measures speed, and throughput shows capacity under load.</div>");
+        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Comparing REST Direct (calling DataStore directly) vs REST+GraphQL (using GraphQL as internal layer). This shows the overhead of adding GraphQL as an abstraction layer.</div>");
         sb.AppendLine("<div class='metrics-grid'>");
-        
-        AddMetricCard(sb, "Total Requests", report.RestMetrics.TotalRequests.ToString(), "REST", "rest");
-        AddMetricCard(sb, "Total Requests", report.GraphQLMetrics.TotalRequests.ToString(), "GraphQL", "graphql");
-        
-        AddMetricCard(sb, "Success Rate", $"{report.RestMetrics.SuccessRate:F2}", "REST", report.ReliabilityWinner == ApiType.REST ? "winner" : "rest", "%");
-        AddMetricCard(sb, "Success Rate", $"{report.GraphQLMetrics.SuccessRate:F2}", "GraphQL", report.ReliabilityWinner == ApiType.GraphQL ? "winner" : "graphql", "%");
-        
-        AddMetricCard(sb, "Avg Response Time", $"{report.RestMetrics.AverageResponseTimeMs:F2}", "REST", report.ResponseTimeWinner == ApiType.REST ? "winner" : "rest", "ms");
-        AddMetricCard(sb, "Avg Response Time", $"{report.GraphQLMetrics.AverageResponseTimeMs:F2}", "GraphQL", report.ResponseTimeWinner == ApiType.GraphQL ? "winner" : "graphql", "ms");
-        
-        AddMetricCard(sb, "Throughput", $"{report.RestMetrics.RequestsPerSecond:F2}", "REST", report.ThroughputWinner == ApiType.REST ? "winner" : "rest", "req/s");
-        AddMetricCard(sb, "Throughput", $"{report.GraphQLMetrics.RequestsPerSecond:F2}", "GraphQL", report.ThroughputWinner == ApiType.GraphQL ? "winner" : "graphql", "req/s");
-        
+
+        AddMetricCard(sb, "Total Requests", restDirectMetrics.TotalRequests.ToString(), "REST Direct", "rest");
+        AddMetricCard(sb, "Total Requests", restGraphQLMetrics.TotalRequests.ToString(), "REST+GraphQL", "graphql");
+
+        AddMetricCard(sb, "Success Rate", $"{restDirectMetrics.SuccessRate:F2}", "REST Direct", report.ReliabilityWinner == ApiType.RESTDirect ? "winner" : "rest", "%");
+        AddMetricCard(sb, "Success Rate", $"{restGraphQLMetrics.SuccessRate:F2}", "REST+GraphQL", report.ReliabilityWinner == ApiType.RESTWithGraphQL ? "winner" : "graphql", "%");
+
+        AddMetricCard(sb, "Avg Response Time", $"{restDirectMetrics.AverageResponseTimeMs:F2}", "REST Direct", report.ResponseTimeWinner == ApiType.RESTDirect ? "winner" : "rest", "ms");
+        AddMetricCard(sb, "Avg Response Time", $"{restGraphQLMetrics.AverageResponseTimeMs:F2}", "REST+GraphQL", report.ResponseTimeWinner == ApiType.RESTWithGraphQL ? "winner" : "graphql", "ms");
+
+        AddMetricCard(sb, "Throughput", $"{restDirectMetrics.RequestsPerSecond:F2}", "REST Direct", report.ThroughputWinner == ApiType.RESTDirect ? "winner" : "rest", "req/s");
+        AddMetricCard(sb, "Throughput", $"{restGraphQLMetrics.RequestsPerSecond:F2}", "REST+GraphQL", report.ThroughputWinner == ApiType.RESTWithGraphQL ? "winner" : "graphql", "req/s");
+
         sb.AppendLine("</div>");
 
         // Response Time Details
         sb.AppendLine("<h2>Response Time Analysis (NFR: Performance)</h2>");
-        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Response time metrics show how quickly your API responds. Lower values are better. P50/P95/P99 percentiles reveal user experience - P95 means 95% of users get responses faster than this value. High P99 values may indicate occasional slowdowns that affect user experience.</div>");
+        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Response time shows the overhead of using GraphQL internally. REST Direct should be faster as it has a simpler execution path. REST+GraphQL adds GraphQL query parsing and execution overhead.</div>");
         sb.AppendLine("<table>");
-        sb.AppendLine("<tr><th>Metric</th><th>REST</th><th>GraphQL</th><th>Winner</th></tr>");
-        AddTableRow(sb, "Average", $"{report.RestMetrics.AverageResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.AverageResponseTimeMs:F2} ms", report.ResponseTimeWinner.ToString());
-        AddTableRow(sb, "P50 (Median)", $"{report.RestMetrics.P50ResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.P50ResponseTimeMs:F2} ms", report.RestMetrics.P50ResponseTimeMs < report.GraphQLMetrics.P50ResponseTimeMs ? "REST" : "GraphQL");
-        AddTableRow(sb, "P95", $"{report.RestMetrics.P95ResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.P95ResponseTimeMs:F2} ms", report.RestMetrics.P95ResponseTimeMs < report.GraphQLMetrics.P95ResponseTimeMs ? "REST" : "GraphQL");
-        AddTableRow(sb, "P99", $"{report.RestMetrics.P99ResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.P99ResponseTimeMs:F2} ms", report.RestMetrics.P99ResponseTimeMs < report.GraphQLMetrics.P99ResponseTimeMs ? "REST" : "GraphQL");
-        AddTableRow(sb, "Min", $"{report.RestMetrics.MinResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.MinResponseTimeMs:F2} ms", report.RestMetrics.MinResponseTimeMs < report.GraphQLMetrics.MinResponseTimeMs ? "REST" : "GraphQL");
-        AddTableRow(sb, "Max", $"{report.RestMetrics.MaxResponseTimeMs:F2} ms", $"{report.GraphQLMetrics.MaxResponseTimeMs:F2} ms", report.RestMetrics.MaxResponseTimeMs < report.GraphQLMetrics.MaxResponseTimeMs ? "REST" : "GraphQL");
+        sb.AppendLine("<tr><th>Metric</th><th>REST Direct</th><th>REST+GraphQL</th><th>Winner</th></tr>");
+        AddTableRow(sb, "Average", $"{restDirectMetrics.AverageResponseTimeMs:F2} ms", $"{restGraphQLMetrics.AverageResponseTimeMs:F2} ms", report.ResponseTimeWinner.ToString());
+        AddTableRow(sb, "P50 (Median)", $"{restDirectMetrics.P50ResponseTimeMs:F2} ms", $"{restGraphQLMetrics.P50ResponseTimeMs:F2} ms", restDirectMetrics.P50ResponseTimeMs < restGraphQLMetrics.P50ResponseTimeMs ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "P95", $"{restDirectMetrics.P95ResponseTimeMs:F2} ms", $"{restGraphQLMetrics.P95ResponseTimeMs:F2} ms", restDirectMetrics.P95ResponseTimeMs < restGraphQLMetrics.P95ResponseTimeMs ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "P99", $"{restDirectMetrics.P99ResponseTimeMs:F2} ms", $"{restGraphQLMetrics.P99ResponseTimeMs:F2} ms", restDirectMetrics.P99ResponseTimeMs < restGraphQLMetrics.P99ResponseTimeMs ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Min", $"{restDirectMetrics.MinResponseTimeMs:F2} ms", $"{restGraphQLMetrics.MinResponseTimeMs:F2} ms", restDirectMetrics.MinResponseTimeMs < restGraphQLMetrics.MinResponseTimeMs ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Max", $"{restDirectMetrics.MaxResponseTimeMs:F2} ms", $"{restGraphQLMetrics.MaxResponseTimeMs:F2} ms", restDirectMetrics.MaxResponseTimeMs < restGraphQLMetrics.MaxResponseTimeMs ? "RESTDirect" : "RESTWithGraphQL");
         sb.AppendLine("</table>");
 
         // Bandwidth Efficiency
         sb.AppendLine("<h2>Bandwidth Efficiency (NFR: Efficiency)</h2>");
-        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Payload size affects network bandwidth costs and mobile data usage. Smaller payloads mean faster downloads and lower costs. GraphQL typically has smaller payloads due to field selection, while REST may over-fetch data. Monitor this if bandwidth costs or mobile performance are concerns.</div>");
+        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Payload sizes should be similar since both approaches return the same data. Any differences indicate serialization overhead or metadata differences.</div>");
         sb.AppendLine("<table>");
-        sb.AppendLine("<tr><th>Metric</th><th>REST</th><th>GraphQL</th><th>Winner</th></tr>");
-        AddTableRow(sb, "Avg Payload Size", $"{FormatBytes(report.RestMetrics.AverageResponseSizeBytes)}", $"{FormatBytes(report.GraphQLMetrics.AverageResponseSizeBytes)}", report.PayloadSizeWinner.ToString());
-        AddTableRow(sb, "Min Payload", $"{FormatBytes(report.RestMetrics.MinResponseSizeBytes)}", $"{FormatBytes(report.GraphQLMetrics.MinResponseSizeBytes)}", report.RestMetrics.MinResponseSizeBytes < report.GraphQLMetrics.MinResponseSizeBytes ? "REST" : "GraphQL");
-        AddTableRow(sb, "Max Payload", $"{FormatBytes(report.RestMetrics.MaxResponseSizeBytes)}", $"{FormatBytes(report.GraphQLMetrics.MaxResponseSizeBytes)}", report.RestMetrics.MaxResponseSizeBytes < report.GraphQLMetrics.MaxResponseSizeBytes ? "REST" : "GraphQL");
-        AddTableRow(sb, "Total Bandwidth", $"{FormatBytes(report.RestMetrics.TotalBandwidthBytes)}", $"{FormatBytes(report.GraphQLMetrics.TotalBandwidthBytes)}", report.RestMetrics.TotalBandwidthBytes < report.GraphQLMetrics.TotalBandwidthBytes ? "REST" : "GraphQL");
+        sb.AppendLine("<tr><th>Metric</th><th>REST Direct</th><th>REST+GraphQL</th><th>Winner</th></tr>");
+        AddTableRow(sb, "Avg Payload Size", $"{FormatBytes(restDirectMetrics.AverageResponseSizeBytes)}", $"{FormatBytes(restGraphQLMetrics.AverageResponseSizeBytes)}", report.PayloadSizeWinner.ToString());
+        AddTableRow(sb, "Min Payload", $"{FormatBytes(restDirectMetrics.MinResponseSizeBytes)}", $"{FormatBytes(restGraphQLMetrics.MinResponseSizeBytes)}", restDirectMetrics.MinResponseSizeBytes < restGraphQLMetrics.MinResponseSizeBytes ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Max Payload", $"{FormatBytes(restDirectMetrics.MaxResponseSizeBytes)}", $"{FormatBytes(restGraphQLMetrics.MaxResponseSizeBytes)}", restDirectMetrics.MaxResponseSizeBytes < restGraphQLMetrics.MaxResponseSizeBytes ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Total Bandwidth", $"{FormatBytes(restDirectMetrics.TotalBandwidthBytes)}", $"{FormatBytes(restGraphQLMetrics.TotalBandwidthBytes)}", restDirectMetrics.TotalBandwidthBytes < restGraphQLMetrics.TotalBandwidthBytes ? "RESTDirect" : "RESTWithGraphQL");
         sb.AppendLine("</table>");
 
         // Memory Usage
         sb.AppendLine("<h2>Memory Usage (NFR: Resource Efficiency)</h2>");
-        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> Memory usage impacts server costs and scalability. Lower memory consumption allows more concurrent requests per server. High memory usage can cause garbage collection pressure and increased hosting costs. This is critical for cloud deployments where you pay per resource.</div>");
+        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> REST+GraphQL typically uses more memory due to GraphQL query parsing, execution engine, and additional object allocations. This is the cost of the GraphQL abstraction layer.</div>");
         sb.AppendLine("<table>");
-        sb.AppendLine("<tr><th>Metric</th><th>REST</th><th>GraphQL</th><th>Winner</th></tr>");
-        AddTableRow(sb, "Avg Memory per Request", $"{FormatBytes(report.RestMetrics.AverageMemoryUsedBytes)}", $"{FormatBytes(report.GraphQLMetrics.AverageMemoryUsedBytes)}", report.MemoryEfficiencyWinner.ToString());
-        AddTableRow(sb, "Min Memory", $"{FormatBytes(report.RestMetrics.MinMemoryUsedBytes)}", $"{FormatBytes(report.GraphQLMetrics.MinMemoryUsedBytes)}", report.RestMetrics.MinMemoryUsedBytes < report.GraphQLMetrics.MinMemoryUsedBytes ? "REST" : "GraphQL");
-        AddTableRow(sb, "Max Memory", $"{FormatBytes(report.RestMetrics.MaxMemoryUsedBytes)}", $"{FormatBytes(report.GraphQLMetrics.MaxMemoryUsedBytes)}", report.RestMetrics.MaxMemoryUsedBytes < report.GraphQLMetrics.MaxMemoryUsedBytes ? "REST" : "GraphQL");
-        AddTableRow(sb, "Total Memory Used", $"{FormatBytes(report.RestMetrics.TotalMemoryUsedBytes)}", $"{FormatBytes(report.GraphQLMetrics.TotalMemoryUsedBytes)}", report.RestMetrics.TotalMemoryUsedBytes < report.GraphQLMetrics.TotalMemoryUsedBytes ? "REST" : "GraphQL");
+        sb.AppendLine("<tr><th>Metric</th><th>REST Direct</th><th>REST+GraphQL</th><th>Winner</th></tr>");
+        AddTableRow(sb, "Avg Memory per Request", $"{FormatBytes(restDirectMetrics.AverageMemoryUsedBytes)}", $"{FormatBytes(restGraphQLMetrics.AverageMemoryUsedBytes)}", report.MemoryEfficiencyWinner.ToString());
+        AddTableRow(sb, "Min Memory", $"{FormatBytes(restDirectMetrics.MinMemoryUsedBytes)}", $"{FormatBytes(restGraphQLMetrics.MinMemoryUsedBytes)}", restDirectMetrics.MinMemoryUsedBytes < restGraphQLMetrics.MinMemoryUsedBytes ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Max Memory", $"{FormatBytes(restDirectMetrics.MaxMemoryUsedBytes)}", $"{FormatBytes(restGraphQLMetrics.MaxMemoryUsedBytes)}", restDirectMetrics.MaxMemoryUsedBytes < restGraphQLMetrics.MaxMemoryUsedBytes ? "RESTDirect" : "RESTWithGraphQL");
+        AddTableRow(sb, "Total Memory Used", $"{FormatBytes(restDirectMetrics.TotalMemoryUsedBytes)}", $"{FormatBytes(restGraphQLMetrics.TotalMemoryUsedBytes)}", restDirectMetrics.TotalMemoryUsedBytes < restGraphQLMetrics.TotalMemoryUsedBytes ? "RESTDirect" : "RESTWithGraphQL");
         sb.AppendLine("</table>");
 
         // Endpoint Analysis
-        if (report.RestMetrics.EndpointMetrics.Any())
+        if (restDirectMetrics.EndpointMetrics.Any())
         {
-            sb.AppendLine("<h2>REST Endpoint Analysis</h2>");
+            sb.AppendLine("<h2>REST Direct Endpoint Analysis</h2>");
             sb.AppendLine("<table>");
             sb.AppendLine("<tr><th>Endpoint</th><th>Calls</th><th>Avg Response Time</th><th>Avg Payload</th><th>Success Rate</th></tr>");
-            foreach (var endpoint in report.RestMetrics.EndpointMetrics)
+            foreach (var endpoint in restDirectMetrics.EndpointMetrics)
             {
                 sb.AppendLine($"<tr><td>{endpoint.Endpoint}</td><td>{endpoint.TotalCalls}</td><td>{endpoint.AverageResponseTime:F2} ms</td><td>{FormatBytes(endpoint.AveragePayloadSize)}</td><td>{endpoint.SuccessRate:F2}%</td></tr>");
             }
             sb.AppendLine("</table>");
         }
 
-        if (report.GraphQLMetrics.EndpointMetrics.Any())
+        if (restGraphQLMetrics.EndpointMetrics.Any())
         {
-            sb.AppendLine("<h2>GraphQL Query Analysis</h2>");
+            sb.AppendLine("<h2>REST+GraphQL Backend Endpoint Analysis</h2>");
             sb.AppendLine("<table>");
             sb.AppendLine("<tr><th>Endpoint</th><th>Calls</th><th>Avg Response Time</th><th>Avg Payload</th><th>Success Rate</th></tr>");
-            foreach (var endpoint in report.GraphQLMetrics.EndpointMetrics)
+            foreach (var endpoint in restGraphQLMetrics.EndpointMetrics)
             {
                 sb.AppendLine($"<tr><td>{endpoint.Endpoint}</td><td>{endpoint.TotalCalls}</td><td>{endpoint.AverageResponseTime:F2} ms</td><td>{FormatBytes(endpoint.AveragePayloadSize)}</td><td>{endpoint.SuccessRate:F2}%</td></tr>");
             }
@@ -282,14 +287,14 @@ public class MetricsController : ControllerBase
 
         // NFR Assessment
         sb.AppendLine("<h2>Non-Functional Requirements Assessment</h2>");
-        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> This summary compares REST vs GraphQL across key non-functional requirements. <strong>Performance</strong> affects user experience, <strong>Reliability</strong> ensures consistent service, and <strong>Efficiency</strong> impacts operational costs. Use this to make informed architectural decisions based on your priorities.</div>");
+        sb.AppendLine("<div class='section-info'><strong>What this means:</strong> This compares REST Direct vs REST+GraphQL across key NFRs. <strong>Performance</strong> shows the overhead of GraphQL abstraction, <strong>Reliability</strong> should be similar, and <strong>Efficiency</strong> shows resource costs. Use this to decide if GraphQL's benefits justify its overhead.</div>");
         sb.AppendLine("<table>");
-        sb.AppendLine("<tr><th>NFR Category</th><th>Metric</th><th>REST</th><th>GraphQL</th><th>Winner</th></tr>");
-        sb.AppendLine("<tr><td rowspan='2'><strong>Performance</strong></td><td>Latency (Avg)</td><td>" + $"{report.RestMetrics.AverageResponseTimeMs:F2} ms" + "</td><td>" + $"{report.GraphQLMetrics.AverageResponseTimeMs:F2} ms" + "</td><td><span class='badge winner'>" + report.ResponseTimeWinner + "</span></td></tr>");
-        sb.AppendLine("<tr><td>Throughput</td><td>" + $"{report.RestMetrics.RequestsPerSecond:F2} req/s" + "</td><td>" + $"{report.GraphQLMetrics.RequestsPerSecond:F2} req/s" + "</td><td><span class='badge winner'>" + report.ThroughputWinner + "</span></td></tr>");
-        sb.AppendLine("<tr><td><strong>Reliability</strong></td><td>Success Rate</td><td>" + $"{report.RestMetrics.SuccessRate:F2}%" + "</td><td>" + $"{report.GraphQLMetrics.SuccessRate:F2}%" + "</td><td><span class='badge winner'>" + report.ReliabilityWinner + "</span></td></tr>");
-        sb.AppendLine("<tr><td rowspan='2'><strong>Efficiency</strong></td><td>Bandwidth Usage</td><td>" + FormatBytes(report.RestMetrics.AverageResponseSizeBytes) + "</td><td>" + FormatBytes(report.GraphQLMetrics.AverageResponseSizeBytes) + "</td><td><span class='badge winner'>" + report.PayloadSizeWinner + "</span></td></tr>");
-        sb.AppendLine("<tr><td>Memory Usage</td><td>" + FormatBytes(report.RestMetrics.AverageMemoryUsedBytes) + "</td><td>" + FormatBytes(report.GraphQLMetrics.AverageMemoryUsedBytes) + "</td><td><span class='badge winner'>" + report.MemoryEfficiencyWinner + "</span></td></tr>");
+        sb.AppendLine("<tr><th>NFR Category</th><th>Metric</th><th>REST Direct</th><th>REST+GraphQL</th><th>Winner</th></tr>");
+        sb.AppendLine("<tr><td rowspan='2'><strong>Performance</strong></td><td>Latency (Avg)</td><td>" + $"{restDirectMetrics.AverageResponseTimeMs:F2} ms" + "</td><td>" + $"{restGraphQLMetrics.AverageResponseTimeMs:F2} ms" + "</td><td><span class='badge winner'>" + report.ResponseTimeWinner + "</span></td></tr>");
+        sb.AppendLine("<tr><td>Throughput</td><td>" + $"{restDirectMetrics.RequestsPerSecond:F2} req/s" + "</td><td>" + $"{restGraphQLMetrics.RequestsPerSecond:F2} req/s" + "</td><td><span class='badge winner'>" + report.ThroughputWinner + "</span></td></tr>");
+        sb.AppendLine("<tr><td><strong>Reliability</strong></td><td>Success Rate</td><td>" + $"{restDirectMetrics.SuccessRate:F2}%" + "</td><td>" + $"{restGraphQLMetrics.SuccessRate:F2}%" + "</td><td><span class='badge winner'>" + report.ReliabilityWinner + "</span></td></tr>");
+        sb.AppendLine("<tr><td rowspan='2'><strong>Efficiency</strong></td><td>Bandwidth Usage</td><td>" + FormatBytes(restDirectMetrics.AverageResponseSizeBytes) + "</td><td>" + FormatBytes(restGraphQLMetrics.AverageResponseSizeBytes) + "</td><td><span class='badge winner'>" + report.PayloadSizeWinner + "</span></td></tr>");
+        sb.AppendLine("<tr><td>Memory Usage</td><td>" + FormatBytes(restDirectMetrics.AverageMemoryUsedBytes) + "</td><td>" + FormatBytes(restGraphQLMetrics.AverageMemoryUsedBytes) + "</td><td><span class='badge winner'>" + report.MemoryEfficiencyWinner + "</span></td></tr>");
         sb.AppendLine("</table>");
 
         // Add examples button at bottom
@@ -347,11 +352,11 @@ public class MetricsController : ControllerBase
             .info-box { background: #e8f4f8; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 3px solid #3498db; }
             .comparison-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0; }
             .api-column { background: #f8f9fa; padding: 20px; border-radius: 8px; }
-            .api-column.rest { border-top: 4px solid #e74c3c; }
-            .api-column.graphql { border-top: 4px solid #e91e63; }
+            .api-column.rest-direct { border-top: 4px solid #3498db; }
+            .api-column.rest-graphql { border-top: 4px solid #9b59b6; }
             .api-label { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
-            .api-label.rest { color: #e74c3c; }
-            .api-label.graphql { color: #e91e63; }
+            .api-label.rest-direct { color: #3498db; }
+            .api-label.rest-graphql { color: #9b59b6; }
             .endpoint-title { font-size: 14px; font-weight: bold; color: #2c3e50; margin-bottom: 10px; }
             .req-resp-section { margin-bottom: 15px; }
             .section-header { font-size: 13px; font-weight: bold; color: #7f8c8d; margin-bottom: 5px; text-transform: uppercase; cursor: pointer; user-select: none; padding: 8px; background: #ecf0f1; border-radius: 4px; transition: background 0.2s; }
@@ -386,10 +391,9 @@ public class MetricsController : ControllerBase
         sb.AppendLine("<h1>Request/Response Examples</h1>");
         sb.AppendLine("<div class='info-box'>");
         sb.AppendLine("<strong>About These Examples:</strong><br>");
-        sb.AppendLine("This page shows <strong>ALL</strong> HTTP requests and responses captured during your performance tests. ");
-        sb.AppendLine("Every REST and GraphQL request is captured with its full request body and response body. ");
-        sb.AppendLine("This gives you complete visibility into what data is being sent and received. ");
-        sb.AppendLine("<strong>Note:</strong> For large tests (100+ iterations), this page may contain many examples.");
+        sb.AppendLine("This page compares <strong>REST Direct</strong> (left) vs <strong>REST+GraphQL</strong> (right) requests. ");
+        sb.AppendLine("All HTTP requests and responses are captured with full request/response bodies. ");
+        sb.AppendLine("Compare the same operations across both approaches to see how they differ in structure and payload size.");
         sb.AppendLine("</div>");
 
         if (!examples.Any())
@@ -403,40 +407,41 @@ public class MetricsController : ControllerBase
         else
         {
             // Show summary at top
-            var restCount = examples.Count(e => e.ApiType == ApiType.REST);
-            var graphqlCount = examples.Count(e => e.ApiType == ApiType.GraphQL);
+            var restDirectCount = examples.Count(e => e.ApiType == ApiType.RESTDirect);
+            var restGraphQLCount = examples.Count(e => e.ApiType == ApiType.RESTWithGraphQL);
 
-            // Get ALL distinct examples (across all groups)
-            var allRestExamples = examples.Where(e => e.ApiType == ApiType.REST)
-                .GroupBy(e => new { e.Endpoint, RequestBody = e.RequestBody ?? "" })
+            // Get REST Direct examples (distinct)
+            var restDirectExamples = examples
+                .Where(e => e.ApiType == ApiType.RESTDirect)
+                .GroupBy(e => new { e.Endpoint, e.Method, RequestBody = e.RequestBody ?? "" })
                 .Select(g => g.First())
                 .ToList();
 
-            var allGraphQLExamples = examples.Where(e => e.ApiType == ApiType.GraphQL)
-                .GroupBy(e => new { e.Endpoint, RequestBody = e.RequestBody ?? "" })
+            // Get REST+GraphQL examples (distinct)
+            var restGraphQLExamples = examples
+                .Where(e => e.ApiType == ApiType.RESTWithGraphQL)
+                .GroupBy(e => new { e.Endpoint, e.Method, RequestBody = e.RequestBody ?? "" })
                 .Select(g => g.First())
                 .ToList();
-
-            var totalDistinct = allRestExamples.Count + allGraphQLExamples.Count;
 
             sb.AppendLine("<div class='info-box'>");
-            sb.AppendLine($"<strong>Captured:</strong> {restCount} REST requests ({allRestExamples.Count} distinct), {graphqlCount} GraphQL requests ({allGraphQLExamples.Count} distinct) - Total: {examples.Count} requests ({totalDistinct} distinct)");
+            sb.AppendLine($"<strong>Captured:</strong> REST Direct: {restDirectCount} requests ({restDirectExamples.Count} distinct), REST+GraphQL: {restGraphQLCount} requests ({restGraphQLExamples.Count} distinct)");
             sb.AppendLine("</div>");
 
-            // Create single two-column layout for entire page
+            // Create two-column layout: REST Direct vs REST+GraphQL
             sb.AppendLine("<div class='comparison-pair'>");
 
-            // LEFT COLUMN - ALL REST EXAMPLES
-            sb.AppendLine("<div class='api-column rest'>");
-            sb.AppendLine("<div class='api-label rest'>REST API</div>");
-            sb.AppendLine($"<p style='color: #7f8c8d; font-size: 14px; margin-bottom: 20px;'>Showing {allRestExamples.Count} distinct REST requests</p>");
+            // LEFT COLUMN - REST DIRECT
+            sb.AppendLine("<div class='api-column rest-direct'>");
+            sb.AppendLine("<div class='api-label rest-direct'>REST Direct</div>");
+            sb.AppendLine($"<p style='color: #7f8c8d; font-size: 14px; margin-bottom: 20px;'>Showing {restDirectExamples.Count} distinct requests</p>");
 
-            if (allRestExamples.Any())
+            if (restDirectExamples.Any())
             {
-                foreach (var example in allRestExamples)
+                foreach (var example in restDirectExamples)
                 {
                     sb.AppendLine("<div style='margin-bottom: 30px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
-                    sb.AppendLine($"<div class='endpoint-title'>{HttpUtility.HtmlEncode(example.Method)} {HttpUtility.HtmlEncode(example.Endpoint)} <span class='status-badge status-{example.StatusCode}'>{example.StatusCode}</span></div>");
+                    sb.AppendLine($"<div class='endpoint-title'>{HttpUtility.HtmlEncode(example.Method)} {HttpUtility.HtmlEncode(example.Endpoint)}<span class='status-badge status-{example.StatusCode}'>{example.StatusCode}</span></div>");
 
                     // Request
                     sb.AppendLine("<div class='req-resp-section'>");
@@ -473,26 +478,26 @@ public class MetricsController : ControllerBase
             }
             else
             {
-                sb.AppendLine("<div class='no-data'>No REST examples available</div>");
+                sb.AppendLine("<div class='no-data'>No REST Direct examples available</div>");
             }
 
-            sb.AppendLine("</div>"); // End REST column
+            sb.AppendLine("</div>"); // End REST Direct column
 
-            // RIGHT COLUMN - ALL GRAPHQL EXAMPLES
-            sb.AppendLine("<div class='api-column graphql'>");
-            sb.AppendLine("<div class='api-label graphql'>GraphQL API</div>");
-            sb.AppendLine($"<p style='color: #7f8c8d; font-size: 14px; margin-bottom: 20px;'>Showing {allGraphQLExamples.Count} distinct GraphQL requests</p>");
+            // RIGHT COLUMN - REST+GRAPHQL
+            sb.AppendLine("<div class='api-column rest-graphql'>");
+            sb.AppendLine("<div class='api-label rest-graphql'>REST+GraphQL</div>");
+            sb.AppendLine($"<p style='color: #7f8c8d; font-size: 14px; margin-bottom: 20px;'>Showing {restGraphQLExamples.Count} distinct requests</p>");
 
-            if (allGraphQLExamples.Any())
+            if (restGraphQLExamples.Any())
             {
-                foreach (var example in allGraphQLExamples)
+                foreach (var example in restGraphQLExamples)
                 {
                     sb.AppendLine("<div style='margin-bottom: 30px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);'>");
-                    sb.AppendLine($"<div class='endpoint-title'>{HttpUtility.HtmlEncode(example.Method)} {HttpUtility.HtmlEncode(example.Endpoint)} <span class='status-badge status-{example.StatusCode}'>{example.StatusCode}</span></div>");
+                    sb.AppendLine($"<div class='endpoint-title'>{HttpUtility.HtmlEncode(example.Method)} {HttpUtility.HtmlEncode(example.Endpoint)}<span class='status-badge status-{example.StatusCode}'>{example.StatusCode}</span></div>");
 
                     // Request
                     sb.AppendLine("<div class='req-resp-section'>");
-                    sb.AppendLine("<div class='section-header' onclick='toggleCollapse(this)'>Request (GraphQL Query)</div>");
+                    sb.AppendLine("<div class='section-header' onclick='toggleCollapse(this)'>Request</div>");
                     sb.AppendLine("<div class='collapsible-content'>");
                     if (!string.IsNullOrEmpty(example.RequestBody))
                     {
@@ -500,7 +505,7 @@ public class MetricsController : ControllerBase
                     }
                     else
                     {
-                        sb.AppendLine("<div class='no-data'>No request body captured</div>");
+                        sb.AppendLine("<div class='no-data'>No request body (GET request)</div>");
                     }
                     sb.AppendLine("</div>");
                     sb.AppendLine("</div>");
@@ -525,10 +530,10 @@ public class MetricsController : ControllerBase
             }
             else
             {
-                sb.AppendLine("<div class='no-data'>No GraphQL examples available</div>");
+                sb.AppendLine("<div class='no-data'>No REST+GraphQL examples available</div>");
             }
 
-            sb.AppendLine("</div>"); // End GraphQL column
+            sb.AppendLine("</div>"); // End REST+GraphQL column
             sb.AppendLine("</div>"); // End comparison-pair
         }
 

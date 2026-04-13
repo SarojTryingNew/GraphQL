@@ -10,6 +10,7 @@ builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<MetricsCollector>();
 builder.Services.AddSingleton<OrderService>(); // Service layer for shared business logic
 builder.Services.AddSingleton<DashboardService>(); // Service layer for dashboard calculations
+builder.Services.AddSingleton<GraphQLExecutorService>(); // Service to execute GraphQL internally
 
 builder.Services.AddControllers();
 

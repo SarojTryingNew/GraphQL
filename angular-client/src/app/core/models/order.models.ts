@@ -88,7 +88,7 @@ export interface Product {
 
 export interface OperationMetrics {
   operationType: 'create' | 'update' | 'delete' | 'get';
-  apiType: 'REST' | 'GraphQL';
+  apiType: 'REST' | 'GraphQL' | 'REST Direct' | 'REST+GraphQL';
   startTime: number;
   endTime: number;
   duration: number;

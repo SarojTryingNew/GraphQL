@@ -11,15 +11,16 @@ function Show-Menu {
     Write-Host "  COMPREHENSIVE TESTS:" -ForegroundColor Yellow
     Write-Host "  1. Quick Test (10 iterations + 100 bulk orders)" -ForegroundColor White
     Write-Host "  2. Standard Load Test (100 iterations + 500 bulk orders)" -ForegroundColor White
+    Write-Host "  3. Bulk Operations ONLY - Complete Suite (CREATE/GET/UPDATE/DELETE)" -ForegroundColor Magenta
     Write-Host ""
     Write-Host "  INDIVIDUAL SCENARIO TESTS:" -ForegroundColor Yellow
-    Write-Host "  3. Bulk Create Operations Test" -ForegroundColor Green
-    Write-Host "  4. Bulk Update Operations Test" -ForegroundColor Yellow
-    Write-Host "  5. Bulk Delete Operations Test" -ForegroundColor Red
-    Write-Host "  6. Get All Orders Test" -ForegroundColor Cyan
-    Write-Host "  7. Nested Object Graph Test" -ForegroundColor White
-    Write-Host "  8. Dashboard Aggregation Test" -ForegroundColor White
-    Write-Host "  9. Multiple Dependent Calls Test" -ForegroundColor White
+    Write-Host "  4. Bulk Create Operations Test" -ForegroundColor Green
+    Write-Host "  5. Bulk Update Operations Test" -ForegroundColor Yellow
+    Write-Host "  6. Bulk Delete Operations Test" -ForegroundColor Red
+    Write-Host "  7. Get All Orders Test" -ForegroundColor Cyan
+    Write-Host "  8. Nested Object Graph Test" -ForegroundColor White
+    Write-Host "  9. Dashboard Aggregation Test" -ForegroundColor White
+    Write-Host "  10. Multiple Dependent Calls Test" -ForegroundColor White
     Write-Host ""
     Write-Host "  0. Exit" -ForegroundColor White
     Write-Host ""
@@ -107,6 +108,77 @@ while ($keepRunning) {
             Open-MetricsReport
         }
         "3" {
+            Write-Host ""
+            Write-Host "================================================================" -ForegroundColor Magenta
+            Write-Host "   Bulk Operations ONLY - Complete Test Suite Configuration" -ForegroundColor Magenta
+            Write-Host "================================================================" -ForegroundColor Magenta
+            Write-Host ""
+            Write-Host "This test runs ALL bulk operations in sequence:" -ForegroundColor Yellow
+            Write-Host "  1. Bulk CREATE" -ForegroundColor Green
+            Write-Host "  2. Bulk GET" -ForegroundColor Cyan
+            Write-Host "  3. Bulk UPDATE" -ForegroundColor Yellow
+            Write-Host "  4. Bulk DELETE" -ForegroundColor Red
+            Write-Host ""
+            Write-Host "  1. Quick Test       (10 iterations × 10 orders)" -ForegroundColor Green
+            Write-Host "  2. Standard Test    (25 iterations × 10 orders)" -ForegroundColor Yellow
+            Write-Host "  3. Heavy Load Test  (50 iterations × 20 orders)" -ForegroundColor Magenta
+            Write-Host "  4. Custom Configuration" -ForegroundColor Cyan
+            Write-Host "  0. Back to Main Menu" -ForegroundColor White
+            Write-Host ""
+
+            $bulkChoice = Read-Host "Select test type"
+
+            $iterations = 0
+            $ordersPerBulk = 0
+
+            switch ($bulkChoice) {
+                "1" { 
+                    $iterations = 10
+                    $ordersPerBulk = 10
+                    Write-Host "`nSelected: Quick Bulk Operations Test" -ForegroundColor Green
+                }
+                "2" { 
+                    $iterations = 25
+                    $ordersPerBulk = 10
+                    Write-Host "`nSelected: Standard Bulk Operations Test" -ForegroundColor Yellow
+                }
+                "3" { 
+                    $iterations = 50
+                    $ordersPerBulk = 20
+                    Write-Host "`nSelected: Heavy Load Bulk Operations Test" -ForegroundColor Magenta
+                }
+                "4" { 
+                    Write-Host "`nCustom Configuration" -ForegroundColor Cyan
+                    Write-Host ""
+                    $iterations = Read-Host "Number of bulk iterations"
+                    $iterations = [int]$iterations
+                    $ordersPerBulk = Read-Host "Orders per bulk request"
+                    $ordersPerBulk = [int]$ordersPerBulk
+                }
+                "0" { 
+                    continue
+                }
+                default { 
+                    Write-Host ""
+                    Write-Host "Invalid choice. Returning to main menu." -ForegroundColor Red
+                    Start-Sleep -Seconds 1
+                    continue
+                }
+            }
+
+            if ($iterations -gt 0 -and $ordersPerBulk -gt 0) {
+                Write-Host ""
+                Write-Host "Configuration:" -ForegroundColor Yellow
+                Write-Host "  Iterations:      $iterations" -ForegroundColor White
+                Write-Host "  Orders per bulk: $ordersPerBulk" -ForegroundColor White
+                Write-Host "  Total operations: $($iterations * $ordersPerBulk * 4) (CREATE/GET/UPDATE/DELETE)" -ForegroundColor White
+                Write-Host ""
+
+                & "$PSScriptRoot\bulk-operations-only.ps1" -Iterations $iterations -OrdersPerBulk $ordersPerBulk
+                Open-MetricsReport
+            }
+        }
+        "4" {
             Write-Host ""
             Write-Host "================================================================" -ForegroundColor Cyan
             Write-Host "     Bulk CREATE Operations Test - Configuration" -ForegroundColor Cyan
@@ -197,7 +269,7 @@ while ($keepRunning) {
                 Open-MetricsReport
             }
         }
-        "4" {
+        "5" {
             Write-Host ""
             Write-Host "================================================================" -ForegroundColor Cyan
             Write-Host "     Bulk UPDATE Operations Test - Configuration" -ForegroundColor Cyan
@@ -275,7 +347,7 @@ while ($keepRunning) {
                 Open-MetricsReport
             }
         }
-        "5" {
+        "6" {
             Write-Host ""
             Write-Host "================================================================" -ForegroundColor Cyan
             Write-Host "     Bulk DELETE Operations Test - Configuration" -ForegroundColor Cyan
@@ -353,7 +425,7 @@ while ($keepRunning) {
                 Open-MetricsReport
             }
         }
-        "6" {
+        "7" {
             Write-Host ""
             Write-Host "Enter number of iterations for Get All Orders Test (default: 10):" -ForegroundColor Cyan
             $iterations = Read-Host "Iterations"
@@ -377,7 +449,7 @@ while ($keepRunning) {
             & "$performanceTestsPath\load-test-bulk-get.ps1" -Iterations $iterations
             Open-MetricsReport
         }
-        "7" {
+        "8" {
             Write-Host ""
             Write-Host "Enter number of iterations for Nested Object Graph Test (default: 100):" -ForegroundColor Cyan
             $iterations = Read-Host "Iterations"
@@ -401,7 +473,7 @@ while ($keepRunning) {
             & "$performanceTestsPath\load-test-nested.ps1" -Iterations $iterations
             Open-MetricsReport
         }
-        "8" {
+        "9" {
             Write-Host ""
             Write-Host "Enter number of iterations for Dashboard Aggregation Test (default: 100):" -ForegroundColor Cyan
             $iterations = Read-Host "Iterations"
@@ -425,7 +497,7 @@ while ($keepRunning) {
             & "$performanceTestsPath\load-test-dashboard.ps1" -Iterations $iterations
             Open-MetricsReport
         }
-        "9" {
+        "10" {
             Write-Host ""
             Write-Host "Enter number of user iterations for Multiple Calls Test (default: 100):" -ForegroundColor Cyan
             Write-Host "  REST will make 3× HTTP calls, GraphQL will make 1× HTTP calls" -ForegroundColor Gray

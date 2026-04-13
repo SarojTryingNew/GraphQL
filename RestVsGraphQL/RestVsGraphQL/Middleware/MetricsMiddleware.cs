@@ -85,9 +85,19 @@ public class MetricsMiddleware
             // Clamp to non-negative values (concurrent requests may cause fluctuations)
             if (memoryUsed < 0) memoryUsed = 0;
 
-            var apiType = context.Request.Path.StartsWithSegments("/api") 
-                ? ApiType.REST 
-                : ApiType.GraphQL;
+            var apiType = ApiType.REST;
+            if (context.Request.Path.StartsWithSegments("/graphql"))
+            {
+                apiType = ApiType.GraphQL;
+            }
+            else if (context.Request.Path.StartsWithSegments("/api/graphql-backend"))
+            {
+                apiType = ApiType.RESTWithGraphQL;
+            }
+            else if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                apiType = ApiType.RESTDirect;
+            }
 
             var metric = new ApiMetric
             {
