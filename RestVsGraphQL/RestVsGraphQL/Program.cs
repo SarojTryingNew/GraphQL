@@ -1,4 +1,5 @@
 using RestVsGraphQL.GraphQL;
+using RestVsGraphQL.GraphQL.DataLoaders;
 using RestVsGraphQL.Services;
 using RestVsGraphQL.Metrics;
 using RestVsGraphQL.Middleware;
@@ -8,8 +9,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<MetricsCollector>();
-builder.Services.AddSingleton<OrderService>(); // Service layer for shared business logic
-builder.Services.AddSingleton<DashboardService>(); // Service layer for dashboard calculations
+builder.Services.AddSingleton<OrderService>();
+builder.Services.AddSingleton<DashboardService>();
+
+// ✅ GATEWAY PATTERN: Register HttpClient for REST API calls
+builder.Services.AddHttpClient<RestApiClient>(client =>
+{
+    var baseUrl = builder.Configuration["RestApi:BaseUrl"] ?? "https://localhost:7000/api";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
 
 builder.Services.AddControllers();
 
@@ -39,19 +48,20 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add GraphQL
+// ✅ GATEWAY PATTERN: GraphQL calls REST APIs via HttpClient
 builder.Services
     .AddGraphQLServer()
-    .AddQueryType<Query>()
-    .AddMutationType<Mutation>()
-    // Register DataLoaders for efficient batching
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CustomerByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CategoryByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemsByOrderIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemNotesByOrderItemIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrdersByCustomerIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductsByCategoryIdDataLoader>();
+    .AddQueryType<GatewayQuery>()        // Uses RestApiClient
+    .AddMutationType<GatewayMutation>()  // Uses RestApiClient
+    // REST-based DataLoaders (call REST APIs)
+    .AddDataLoader<RestCustomerByIdDataLoader>()
+    .AddDataLoader<RestProductByIdDataLoader>()
+    .AddDataLoader<RestCategoryByIdDataLoader>()
+    .AddDataLoader<RestOrderItemsByOrderIdDataLoader>()
+    .AddDataLoader<RestOrdersByCustomerIdDataLoader>()
+    .AddDataLoader<RestProductsByCategoryIdDataLoader>()
+    // DataStore-based loader for OrderItemNotes (no REST endpoint yet)
+    .AddDataLoader<OrderItemNotesByOrderItemIdDataLoader>();
 
 var app = builder.Build();
 

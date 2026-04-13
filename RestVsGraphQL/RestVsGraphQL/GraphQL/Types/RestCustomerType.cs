@@ -4,18 +4,14 @@ using RestVsGraphQL.Models;
 namespace RestVsGraphQL.GraphQL.Types;
 
 /// <summary>
-/// Type extension for Customer that adds field resolvers for navigation properties.
+/// Type extension for Customer using REST-based DataLoaders.
 /// </summary>
 [ObjectType<Customer>]
-public static class CustomerType
+public static class RestCustomerType
 {
-    /// <summary>
-    /// Resolver for the Orders navigation property.
-    /// Uses DataLoader to batch-load all orders for requested customers.
-    /// </summary>
     public static async Task<IEnumerable<Order>> GetOrdersAsync(
         [Parent] Customer customer,
-        OrdersByCustomerIdDataLoader dataLoader,
+        RestOrdersByCustomerIdDataLoader dataLoader,
         CancellationToken cancellationToken)
         => await dataLoader.LoadAsync(customer.Id, cancellationToken);
 }

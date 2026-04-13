@@ -93,4 +93,15 @@ public class OrdersController : ControllerBase
         // Delegate to service layer (shared with GraphQL)
         return Ok(_orderService.BulkDeleteOrders(request));
     }
+
+    /// <summary>
+    /// Batch endpoint for GraphQL DataLoader efficiency.
+    /// GET /api/orders/by-customers?customerIds=1,2,3
+    /// </summary>
+    [HttpGet("by-customers")]
+    public ActionResult<IEnumerable<Order>> GetOrdersByCustomerIds([FromQuery] int[] customerIds)
+    {
+        var orders = _dataStore.Orders.Where(o => customerIds.Contains(o.CustomerId));
+        return Ok(orders);
+    }
 }

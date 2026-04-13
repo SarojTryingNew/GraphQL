@@ -23,4 +23,26 @@ public class ProductsController : BaseEntityController<Product>
         }
         return product;
     }
+
+    /// <summary>
+    /// Batch endpoint for GraphQL DataLoader efficiency.
+    /// GET /api/products/batch?ids=1,2,3,4,5
+    /// </summary>
+    [HttpGet("batch")]
+    public ActionResult<IEnumerable<Product>> GetProductsByIds([FromQuery] int[] ids)
+    {
+        var products = DataStore.Products.Where(p => ids.Contains(p.Id));
+        return Ok(products);
+    }
+
+    /// <summary>
+    /// Batch endpoint for GraphQL DataLoader efficiency.
+    /// GET /api/products/by-categories?categoryIds=1,2,3
+    /// </summary>
+    [HttpGet("by-categories")]
+    public ActionResult<IEnumerable<Product>> GetProductsByCategoryIds([FromQuery] int[] categoryIds)
+    {
+        var products = DataStore.Products.Where(p => categoryIds.Contains(p.CategoryId));
+        return Ok(products);
+    }
 }

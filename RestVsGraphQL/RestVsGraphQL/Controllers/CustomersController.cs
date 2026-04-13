@@ -26,4 +26,15 @@ public class CustomersController : BaseEntityController<Customer>
         var orders = DataStore.Orders.Where(o => o.CustomerId == id).ToList();
         return Ok(orders);
     }
+
+    /// <summary>
+    /// Batch endpoint for GraphQL DataLoader efficiency.
+    /// GET /api/customers/batch?ids=1,2,3,4,5
+    /// </summary>
+    [HttpGet("batch")]
+    public ActionResult<IEnumerable<Customer>> GetCustomersByIds([FromQuery] int[] ids)
+    {
+        var customers = DataStore.Customers.Where(c => ids.Contains(c.Id));
+        return Ok(customers);
+    }
 }

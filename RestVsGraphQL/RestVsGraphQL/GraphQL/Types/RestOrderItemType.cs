@@ -4,25 +4,19 @@ using RestVsGraphQL.Models;
 namespace RestVsGraphQL.GraphQL.Types;
 
 /// <summary>
-/// Type extension for OrderItem that adds field resolvers for navigation properties.
+/// Type extension for OrderItem using REST-based DataLoaders.
 /// </summary>
 [ObjectType<OrderItem>]
-public static class OrderItemType
+public static class RestOrderItemType
 {
-    /// <summary>
-    /// Resolver for the Product navigation property.
-    /// Uses DataLoader for efficient batching.
-    /// </summary>
     public static async Task<Product?> GetProductAsync(
         [Parent] OrderItem orderItem,
-        ProductByIdDataLoader dataLoader,
+        RestProductByIdDataLoader dataLoader,
         CancellationToken cancellationToken)
         => await dataLoader.LoadAsync(orderItem.ProductId, cancellationToken);
 
-    /// <summary>
-    /// Resolver for the Notes navigation property.
-    /// Uses DataLoader to batch-load all notes for requested order items.
-    /// </summary>
+    // Note: OrderItemNotes don't have a REST endpoint yet
+    // Using the existing DataStore-based loader for now
     public static async Task<IEnumerable<OrderItemNote>> GetNotesAsync(
         [Parent] OrderItem orderItem,
         OrderItemNotesByOrderItemIdDataLoader dataLoader,

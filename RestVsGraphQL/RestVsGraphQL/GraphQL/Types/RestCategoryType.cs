@@ -4,18 +4,14 @@ using RestVsGraphQL.Models;
 namespace RestVsGraphQL.GraphQL.Types;
 
 /// <summary>
-/// Type extension for Category that adds field resolvers for navigation properties.
+/// Type extension for Category using REST-based DataLoaders.
 /// </summary>
 [ObjectType<Category>]
-public static class CategoryType
+public static class RestCategoryType
 {
-    /// <summary>
-    /// Resolver for the Products navigation property.
-    /// Uses DataLoader to batch-load all products for requested categories.
-    /// </summary>
     public static async Task<IEnumerable<Product>> GetProductsAsync(
         [Parent] Category category,
-        ProductsByCategoryIdDataLoader dataLoader,
+        RestProductsByCategoryIdDataLoader dataLoader,
         CancellationToken cancellationToken)
         => await dataLoader.LoadAsync(category.Id, cancellationToken);
 }
