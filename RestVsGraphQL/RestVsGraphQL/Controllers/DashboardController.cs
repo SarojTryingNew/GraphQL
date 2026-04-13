@@ -8,73 +8,20 @@ namespace RestVsGraphQL.Controllers;
 [Route("api/[controller]")]
 public class DashboardController : ControllerBase
 {
+    private readonly DashboardService _dashboardService;
     private readonly DataStore _dataStore;
 
-    public DashboardController(DataStore dataStore)
+    public DashboardController(DashboardService dashboardService, DataStore dataStore)
     {
+        _dashboardService = dashboardService;
         _dataStore = dataStore;
     }
 
     [HttpGet]
     public ActionResult<DashboardViewModel> GetDashboard()
     {
-        var dashboard = new DashboardViewModel
-        {
-            TotalCustomers = _dataStore.Customers.Count,
-            TotalOrders = _dataStore.Orders.Count,
-            TotalRevenue = _dataStore.Orders.Sum(o => o.TotalAmount),
-            PendingOrders = _dataStore.Orders.Count(o => o.Status == "Pending"),
-            CompletedOrders = _dataStore.Orders.Count(o => o.Status == "Completed")
-        };
-
-        // Optimization: Create dictionary lookups to avoid N+1 queries
-        var productLookup = _dataStore.Products.ToDictionary(p => p.Id);
-        var customerLookup = _dataStore.Customers.ToDictionary(c => c.Id);
-
-        dashboard.TopProducts = _dataStore.OrderItems
-            .GroupBy(oi => oi.ProductId)
-            .Select(g => new TopProductDto
-            {
-                ProductId = g.Key,
-                ProductName = productLookup.TryGetValue(g.Key, out var product) ? product.Name : "Unknown",
-                QuantitySold = g.Sum(oi => oi.Quantity),
-                Revenue = g.Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
-            })
-            .OrderByDescending(p => p.Revenue)
-            .Take(5)
-            .ToList();
-
-        dashboard.RecentOrders = _dataStore.Orders
-            .OrderByDescending(o => o.OrderDate)
-            .Take(10)
-            .Select(o => new RecentOrderDto
-            {
-                OrderId = o.Id,
-                OrderDate = o.OrderDate,
-                CustomerName = customerLookup.TryGetValue(o.CustomerId, out var customer) ? customer.Name : "Unknown",
-                TotalAmount = o.TotalAmount,
-                Status = o.Status
-            })
-            .ToList();
-
-        dashboard.TopCustomers = _dataStore.Orders
-            .GroupBy(o => o.CustomerId)
-            .Select(g => new CustomerStatsDto
-            {
-                CustomerId = g.Key,
-                CustomerName = customerLookup.TryGetValue(g.Key, out var customer) ? customer.Name : "Unknown",
-                OrderCount = g.Count(),
-                TotalSpent = g.Sum(o => o.TotalAmount)
-            })
-            .OrderByDescending(c => c.TotalSpent)
-            .Take(5)
-            .ToList();
-
-        dashboard.RevenueByMonth = _dataStore.Orders
-            .GroupBy(o => o.OrderDate.ToString("yyyy-MM"))
-            .ToDictionary(g => g.Key, g => g.Sum(o => o.TotalAmount));
-
-        return Ok(dashboard);
+        // REST always returns complete dashboard
+        return Ok(_dashboardService.GetCompleteDashboard());
     }
 
     [HttpGet("stats")]

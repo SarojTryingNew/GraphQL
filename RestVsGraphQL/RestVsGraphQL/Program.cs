@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<MetricsCollector>();
 builder.Services.AddSingleton<OrderService>(); // Service layer for shared business logic
+builder.Services.AddSingleton<DashboardService>(); // Service layer for dashboard calculations
 
 builder.Services.AddControllers();
 
