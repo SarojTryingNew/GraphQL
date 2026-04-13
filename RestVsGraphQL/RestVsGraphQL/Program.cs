@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddSingleton<DataStore>();
 builder.Services.AddSingleton<MetricsCollector>();
+builder.Services.AddSingleton<OrderService>(); // Service layer for shared business logic
 
 builder.Services.AddControllers();
 
@@ -41,7 +42,15 @@ builder.Services.AddCors(options =>
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
-    .AddMutationType<Mutation>();
+    .AddMutationType<Mutation>()
+    // Register DataLoaders for efficient batching
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CustomerByIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductByIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CategoryByIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemsByOrderIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemNotesByOrderItemIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrdersByCustomerIdDataLoader>()
+    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductsByCategoryIdDataLoader>();
 
 var app = builder.Build();
 

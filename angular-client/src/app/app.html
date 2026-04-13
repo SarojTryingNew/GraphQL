@@ -1,0 +1,46 @@
+<div class="app-container">
+  <!-- Home Page Content -->
+  <div *ngIf="isHomePage">
+    <header>
+      <h1>🚀 REST vs GraphQL — Bulk Operations</h1>
+      <p>Click any operation card to run both APIs and compare client-side performance</p>
+      <div class="connection-bar">
+        <button (click)="testConnection()" class="connect-btn">🔌 Test Connection</button>
+        <span *ngIf="connectionStatus"
+              [class.conn-ok]="connectionStatus.success"
+              [class.conn-err]="!connectionStatus.success">
+          {{ connectionStatus.message }}
+        </span>
+      </div>
+    </header>
+
+    <main>
+      <div class="operations-grid">
+        <div *ngFor="let op of operations" 
+             class="operation-card" 
+             (click)="navigateToOperation(op.type)">
+          
+          <div class="card-icon">{{ op.icon }}</div>
+          <div class="card-content">
+            <h3>{{ op.label }}</h3>
+            <p>{{ op.description }}</p>
+          </div>
+          <div class="card-arrow">→</div>
+        </div>
+      </div>
+
+      <div class="info-panel">
+        <h2>ℹ️ How It Works</h2>
+        <ul>
+          <li><strong>Click any card</strong> above to open a dedicated comparison screen</li>
+          <li><strong>Configure</strong> the number of items for bulk operations</li>
+          <li><strong>Run the comparison</strong> to execute both REST and GraphQL</li>
+          <li><strong>View results instantly</strong> with side-by-side KPIs and winner declaration</li>
+        </ul>
+      </div>
+    </main>
+  </div>
+
+  <!-- Router Outlet for Operation Pages -->
+  <router-outlet></router-outlet>
+</div>

@@ -6,29 +6,21 @@ namespace RestVsGraphQL.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ProductsController : ControllerBase
+public class ProductsController : BaseEntityController<Product>
 {
-    private readonly DataStore _dataStore;
-
-    public ProductsController(DataStore dataStore)
+    public ProductsController(DataStore dataStore) : base(dataStore)
     {
-        _dataStore = dataStore;
     }
 
-    [HttpGet]
-    public ActionResult<IEnumerable<Product>> GetProducts()
-    {
-        return Ok(_dataStore.Products);
-    }
+    protected override IEnumerable<Product> GetCollection() => DataStore.Products;
 
-    [HttpGet("{id}")]
-    public ActionResult<Product> GetProduct(int id)
+    protected override Product? FindById(int id)
     {
-        var product = _dataStore.Products.FirstOrDefault(p => p.Id == id);
-        if (product == null)
-            return NotFound();
-
-        product.Category = _dataStore.Categories.FirstOrDefault(c => c.Id == product.CategoryId);
-        return Ok(product);
+        var product = DataStore.Products.FirstOrDefault(p => p.Id == id);
+        if (product != null)
+        {
+            product.Category = DataStore.Categories.FirstOrDefault(c => c.Id == product.CategoryId);
+        }
+        return product;
     }
 }

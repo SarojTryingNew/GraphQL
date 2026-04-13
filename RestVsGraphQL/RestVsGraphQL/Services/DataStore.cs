@@ -1,4 +1,5 @@
 using RestVsGraphQL.Models;
+using System.Threading;
 
 namespace RestVsGraphQL.Services;
 
@@ -11,12 +12,12 @@ public class DataStore
     private readonly List<OrderItem> _orderItems = new();
     private readonly List<OrderItemNote> _orderItemNotes = new();
 
-    private int _nextCustomerId = 1;
-    private int _nextOrderId = 1;
-    private int _nextProductId = 1;
-    private int _nextCategoryId = 1;
-    private int _nextOrderItemId = 1;
-    private int _nextOrderItemNoteId = 1;
+    private int _nextCustomerId = 0;
+    private int _nextOrderId = 0;
+    private int _nextProductId = 0;
+    private int _nextCategoryId = 0;
+    private int _nextOrderItemId = 0;
+    private int _nextOrderItemNoteId = 0;
 
     public DataStore()
     {
@@ -30,12 +31,13 @@ public class DataStore
     public List<OrderItem> OrderItems => _orderItems;
     public List<OrderItemNote> OrderItemNotes => _orderItemNotes;
 
-    public int GetNextCustomerId() => _nextCustomerId++;
-    public int GetNextOrderId() => _nextOrderId++;
-    public int GetNextProductId() => _nextProductId++;
-    public int GetNextCategoryId() => _nextCategoryId++;
-    public int GetNextOrderItemId() => _nextOrderItemId++;
-    public int GetNextOrderItemNoteId() => _nextOrderItemNoteId++;
+    // Thread-safe ID generation using Interlocked
+    public int GetNextCustomerId() => Interlocked.Increment(ref _nextCustomerId);
+    public int GetNextOrderId() => Interlocked.Increment(ref _nextOrderId);
+    public int GetNextProductId() => Interlocked.Increment(ref _nextProductId);
+    public int GetNextCategoryId() => Interlocked.Increment(ref _nextCategoryId);
+    public int GetNextOrderItemId() => Interlocked.Increment(ref _nextOrderItemId);
+    public int GetNextOrderItemNoteId() => Interlocked.Increment(ref _nextOrderItemNoteId);
 
     private void SeedData()
     {

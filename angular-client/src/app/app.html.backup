@@ -1,0 +1,59 @@
+<div class="app-container">
+  <header>
+    <h1>🚀 REST vs GraphQL - Bulk Operations Client</h1>
+    <p>Client-side Performance Comparison Dashboard</p>
+  </header>
+
+  <main>
+    <div class="info-card">
+      <h2>✅ Angular App is Running!</h2>
+      <p><strong>Backend API URL:</strong> {{ apiUrl }}</p>
+      <p><strong>GraphQL Endpoint:</strong> {{ graphqlUrl }}</p>
+      
+      <div class="status">
+        <h3>📋 Next Steps:</h3>
+        <ul>
+          <li>✅ Angular application is running on port 4200</li>
+          <li>🔄 Make sure your .NET backend is running on port 5072</li>
+          <li>📊 Components for bulk operations will be added next</li>
+        </ul>
+      </div>
+
+      <div class="quick-test">
+        <h3>🔌 Quick Connection Test:</h3>
+        <button (click)="testConnection()" class="test-btn">
+          Test Backend Connection
+        </button>
+        <p *ngIf="connectionStatus" 
+           [class.success]="connectionStatus.success" 
+           [class.error]="!connectionStatus.success">
+          {{ connectionStatus.message }}
+        </p>
+      </div>
+
+      <div class="features">
+        <h3>🎯 Available Features:</h3>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <h4>✅ Bulk Create</h4>
+            <p>Create multiple orders in one request</p>
+          </div>
+          <div class="feature-card">
+            <h4>🔄 Bulk Update</h4>
+            <p>Update multiple orders simultaneously</p>
+          </div>
+          <div class="feature-card">
+            <h4>❌ Bulk Delete</h4>
+            <p>Delete multiple orders at once</p>
+          </div>
+          <div class="feature-card">
+            <h4>📋 Get Orders</h4>
+            <p>Retrieve all orders or by IDs</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <router-outlet></router-outlet>
+</div>

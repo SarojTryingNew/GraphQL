@@ -1,0 +1,184 @@
+<div class="operation-screen">
+  <!-- Header with Back Button -->
+  <header class="op-header">
+    <button class="back-btn" (click)="goBack()">
+      ← Back to Home
+    </button>
+    <div class="op-title-block">
+      <span class="op-icon-large">{{ operationConfig.icon }}</span>
+      <div>
+        <h1>{{ operationConfig.label }}</h1>
+        <p>{{ operationConfig.description }}</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Configuration Panel -->
+  <div class="config-panel">
+    <h2>⚙️ Configuration</h2>
+    
+    <div class="input-group" *ngIf="operationType !== 'get'">
+      <label for="itemCount">Number of Items:</label>
+      <input
+        id="itemCount"
+        type="number"
+        [(ngModel)]="itemCount"
+        [min]="operationConfig.minCount"
+        [max]="operationConfig.maxCount"
+        [disabled]="running"
+        class="item-input"
+      />
+      <small class="help-text">{{ operationConfig.helpText }}</small>
+    </div>
+
+    <div class="help-info" *ngIf="operationType === 'get'">
+      <small>{{ operationConfig.helpText }}</small>
+    </div>
+
+    <!-- Stored IDs Status for Update/Delete -->
+    <div class="stored-ids-status" *ngIf="operationType === 'update' || operationType === 'delete'">
+      <div *ngIf="storedIdsCount > 0" class="status-box" [class.status-ok]="hasEnoughStoredIds" [class.status-warning]="!hasEnoughStoredIds">
+        <span class="status-icon" *ngIf="hasEnoughStoredIds">✅</span>
+        <span class="status-icon" *ngIf="!hasEnoughStoredIds">⚠️</span>
+        <span class="status-text">
+          <strong>{{ storedIdsCount }}</strong> order IDs available from previous CREATE
+          <span *ngIf="!hasEnoughStoredIds"> (need {{ itemCount * 2 }})</span>
+        </span>
+      </div>
+      <div *ngIf="storedIdsCount === 0" class="status-box status-warning">
+        <span class="status-icon">💡</span>
+        <span class="status-text">
+          No stored IDs. Run <strong>CREATE</strong> first for accurate testing, or sequential IDs (1, 2, 3...) will be used.
+        </span>
+      </div>
+    </div>
+
+    <button
+      class="run-comparison-btn"
+      (click)="runComparison()"
+      [disabled]="running"
+    >
+      <span *ngIf="!running">🚀 Run Comparison</span>
+      <span *ngIf="running" class="loading-text">
+        <span class="dot-spinner"></span> Running both REST & GraphQL...
+      </span>
+    </button>
+  </div>
+
+  <!-- Error Display -->
+  <div *ngIf="error" class="error-panel">
+    <strong>❌ Error:</strong> {{ error }}
+  </div>
+
+  <!-- Results Panel -->
+  <div *ngIf="result" class="results-section">
+    
+    <!-- Winner Banner -->
+    <div class="winner-banner"
+         [class.rest-win]="result.winner === 'REST'"
+         [class.graphql-win]="result.winner === 'GraphQL'"
+         [class.tie-win]="result.winner === 'Tie'">
+      <span class="trophy">🏆</span>
+      <div class="winner-content">
+        <h2>Winner: <strong>{{ result.winner }}</strong></h2>
+        <p>{{ result.winnerReason }}</p>
+      </div>
+    </div>
+
+    <!-- KPI Comparison Table -->
+    <div class="kpi-section">
+      <h2>📊 Performance Metrics</h2>
+      
+      <div class="comparison-table">
+        <!-- Header -->
+        <div class="table-header">
+          <span class="col-metric">Metric</span>
+          <span class="col-api rest-col">REST API</span>
+          <span class="col-api graphql-col">GraphQL API</span>
+          <span class="col-winner">Winner</span>
+        </div>
+
+        <!-- Metric Rows -->
+        <div *ngFor="let m of result.metrics" class="table-row">
+          <span class="col-metric">{{ m.label }}</span>
+          <span class="col-val" [class.val-win]="m.winner === 'REST'">
+            {{ m.restValue }}
+          </span>
+          <span class="col-val" [class.val-win]="m.winner === 'GraphQL'">
+            {{ m.graphqlValue }}
+          </span>
+          <span class="col-winner">
+            <span *ngIf="m.winner === 'REST'" class="badge rest-badge">REST ✓</span>
+            <span *ngIf="m.winner === 'GraphQL'" class="badge graphql-badge">GraphQL ✓</span>
+            <span *ngIf="m.winner === 'Tie'" class="badge tie-badge">Tie</span>
+          </span>
+        </div>
+
+        <!-- Status Row -->
+        <div class="table-row status-row">
+          <span class="col-metric"><strong>Status</strong></span>
+          <span class="col-val"
+                [class.status-ok]="result.rest.success"
+                [class.status-fail]="!result.rest.success">
+            {{ result.rest.success ? '✅ Success' : '❌ Failed' }}
+            <span *ngIf="result.rest.error" class="error-detail">({{ result.rest.error }})</span>
+          </span>
+          <span class="col-val"
+                [class.status-ok]="result.graphql.success"
+                [class.status-fail]="!result.graphql.success">
+            {{ result.graphql.success ? '✅ Success' : '❌ Failed' }}
+            <span *ngIf="result.graphql.error" class="error-detail">({{ result.graphql.error }})</span>
+          </span>
+          <span class="col-winner"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Request & Response Payloads -->
+    <div class="payloads-section">
+      <h2>📄 Request & Response Payloads</h2>
+      
+      <div class="payload-grid">
+        <!-- REST API Payloads -->
+        <div class="payload-card rest-card">
+          <h3>🔵 REST API</h3>
+          
+          <div class="payload-block">
+            <h4>Request</h4>
+            <pre class="payload-content">{{ result.rest.requestPayload | json }}</pre>
+          </div>
+          
+          <div class="payload-block">
+            <h4>Response</h4>
+            <pre class="payload-content">{{ result.rest.responsePayload | json }}</pre>
+          </div>
+        </div>
+
+        <!-- GraphQL API Payloads -->
+        <div class="payload-card graphql-card">
+          <h3>🟣 GraphQL API</h3>
+          
+          <div class="payload-block">
+            <h4>Request</h4>
+            <pre class="payload-content">{{ result.graphql.requestPayload | json }}</pre>
+          </div>
+          
+          <div class="payload-block">
+            <h4>Response</h4>
+            <pre class="payload-content">{{ result.graphql.responsePayload | json }}</pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="action-bar">
+      <button class="secondary-btn" (click)="runComparison()">
+        🔄 Run Again
+      </button>
+      <button class="secondary-btn" (click)="goBack()">
+        ← Back to Home
+      </button>
+    </div>
+  </div>
+</div>

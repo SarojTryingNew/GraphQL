@@ -19,14 +19,8 @@ public class Query
         var order = dataStore.Orders.FirstOrDefault(o => o.Id == id);
         if (order == null) return null;
 
-        order.Customer = dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-        order.Items = dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-
-        foreach (var item in order.Items)
-        {
-            item.Product = dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
-            item.Notes = dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-        }
+        // Use extension method for efficient relation loading
+        order.LoadRelations(dataStore);
 
         return order;
     }
@@ -35,17 +29,8 @@ public class Query
     {
         var orders = dataStore.Orders.Where(o => ids.Contains(o.Id)).ToList();
 
-        foreach (var order in orders)
-        {
-            order.Customer = dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-            order.Items = dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-
-            foreach (var item in order.Items)
-            {
-                item.Product = dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                item.Notes = dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-            }
-        }
+        // Use extension method for efficient batch relation loading
+        orders.LoadRelations(dataStore);
 
         return orders;
     }
@@ -54,14 +39,7 @@ public class Query
         => dataStore.Products;
 
     public Product? GetProduct(int id, [Service] DataStore dataStore)
-    {
-        var product = dataStore.Products.FirstOrDefault(p => p.Id == id);
-        if (product != null)
-        {
-            product.Category = dataStore.Categories.FirstOrDefault(c => c.Id == product.CategoryId);
-        }
-        return product;
-    }
+        => dataStore.Products.FirstOrDefault(p => p.Id == id);
 
     public IEnumerable<Category> GetCategories([Service] DataStore dataStore)
         => dataStore.Categories;
@@ -77,12 +55,16 @@ public class Query
             CompletedOrders = dataStore.Orders.Count(o => o.Status == "Completed")
         };
 
+        // Optimization: Create dictionary lookups to avoid N+1 queries
+        var productLookup = dataStore.Products.ToDictionary(p => p.Id);
+        var customerLookup = dataStore.Customers.ToDictionary(c => c.Id);
+
         dashboard.TopProducts = dataStore.OrderItems
             .GroupBy(oi => oi.ProductId)
             .Select(g => new TopProductDto
             {
                 ProductId = g.Key,
-                ProductName = dataStore.Products.FirstOrDefault(p => p.Id == g.Key)?.Name ?? "Unknown",
+                ProductName = productLookup.TryGetValue(g.Key, out var product) ? product.Name : "Unknown",
                 QuantitySold = g.Sum(oi => oi.Quantity),
                 Revenue = g.Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
             })
@@ -97,7 +79,7 @@ public class Query
             {
                 OrderId = o.Id,
                 OrderDate = o.OrderDate,
-                CustomerName = dataStore.Customers.FirstOrDefault(c => c.Id == o.CustomerId)?.Name ?? "Unknown",
+                CustomerName = customerLookup.TryGetValue(o.CustomerId, out var customer) ? customer.Name : "Unknown",
                 TotalAmount = o.TotalAmount,
                 Status = o.Status
             })
@@ -108,7 +90,7 @@ public class Query
             .Select(g => new CustomerStatsDto
             {
                 CustomerId = g.Key,
-                CustomerName = dataStore.Customers.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Unknown",
+                CustomerName = customerLookup.TryGetValue(g.Key, out var customer) ? customer.Name : "Unknown",
                 OrderCount = g.Count(),
                 TotalSpent = g.Sum(o => o.TotalAmount)
             })

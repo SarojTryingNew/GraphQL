@@ -27,12 +27,16 @@ public class DashboardController : ControllerBase
             CompletedOrders = _dataStore.Orders.Count(o => o.Status == "Completed")
         };
 
+        // Optimization: Create dictionary lookups to avoid N+1 queries
+        var productLookup = _dataStore.Products.ToDictionary(p => p.Id);
+        var customerLookup = _dataStore.Customers.ToDictionary(c => c.Id);
+
         dashboard.TopProducts = _dataStore.OrderItems
             .GroupBy(oi => oi.ProductId)
             .Select(g => new TopProductDto
             {
                 ProductId = g.Key,
-                ProductName = _dataStore.Products.FirstOrDefault(p => p.Id == g.Key)?.Name ?? "Unknown",
+                ProductName = productLookup.TryGetValue(g.Key, out var product) ? product.Name : "Unknown",
                 QuantitySold = g.Sum(oi => oi.Quantity),
                 Revenue = g.Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
             })
@@ -47,7 +51,7 @@ public class DashboardController : ControllerBase
             {
                 OrderId = o.Id,
                 OrderDate = o.OrderDate,
-                CustomerName = _dataStore.Customers.FirstOrDefault(c => c.Id == o.CustomerId)?.Name ?? "Unknown",
+                CustomerName = customerLookup.TryGetValue(o.CustomerId, out var customer) ? customer.Name : "Unknown",
                 TotalAmount = o.TotalAmount,
                 Status = o.Status
             })
@@ -58,7 +62,7 @@ public class DashboardController : ControllerBase
             .Select(g => new CustomerStatsDto
             {
                 CustomerId = g.Key,
-                CustomerName = _dataStore.Customers.FirstOrDefault(c => c.Id == g.Key)?.Name ?? "Unknown",
+                CustomerName = customerLookup.TryGetValue(g.Key, out var customer) ? customer.Name : "Unknown",
                 OrderCount = g.Count(),
                 TotalSpent = g.Sum(o => o.TotalAmount)
             })
@@ -76,32 +80,57 @@ public class DashboardController : ControllerBase
     [HttpGet("stats")]
     public ActionResult GetMultipleStats()
     {
+        // Optimization: Pre-aggregate order data to avoid N+1 queries
+        var customerOrderStats = _dataStore.Orders
+            .GroupBy(o => o.CustomerId)
+            .ToDictionary(
+                g => g.Key,
+                g => new { OrderCount = g.Count(), TotalSpent = g.Sum(o => o.TotalAmount) }
+            );
+
         var customerStats = _dataStore.Customers.Select(c => new
         {
             c.Id,
             c.Name,
-            OrderCount = _dataStore.Orders.Count(o => o.CustomerId == c.Id),
-            TotalSpent = _dataStore.Orders.Where(o => o.CustomerId == c.Id).Sum(o => o.TotalAmount)
+            OrderCount = customerOrderStats.TryGetValue(c.Id, out var stats) ? stats.OrderCount : 0,
+            TotalSpent = customerOrderStats.TryGetValue(c.Id, out var statsSpent) ? statsSpent.TotalSpent : 0m
         });
+
+        // Optimization: Pre-aggregate order item data
+        var productOrderItemStats = _dataStore.OrderItems
+            .GroupBy(oi => oi.ProductId)
+            .ToDictionary(
+                g => g.Key,
+                g => new
+                {
+                    QuantitySold = g.Sum(oi => oi.Quantity),
+                    Revenue = g.Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
+                }
+            );
 
         var productStats = _dataStore.Products.Select(p => new
         {
             p.Id,
             p.Name,
-            QuantitySold = _dataStore.OrderItems.Where(oi => oi.ProductId == p.Id).Sum(oi => oi.Quantity),
-            Revenue = _dataStore.OrderItems.Where(oi => oi.ProductId == p.Id)
-                .Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
+            QuantitySold = productOrderItemStats.TryGetValue(p.Id, out var stats) ? stats.QuantitySold : 0,
+            Revenue = productOrderItemStats.TryGetValue(p.Id, out var statsRev) ? statsRev.Revenue : 0m
         });
+
+        // Optimization: Pre-build product-to-category lookup
+        var productsByCategory = _dataStore.Products
+            .GroupBy(p => p.CategoryId)
+            .ToDictionary(g => g.Key, g => g.ToList());
 
         var categoryStats = _dataStore.Categories.Select(c => new
         {
             c.Id,
             c.Name,
-            ProductCount = _dataStore.Products.Count(p => p.CategoryId == c.Id),
-            TotalRevenue = _dataStore.Products
-                .Where(p => p.CategoryId == c.Id)
-                .SelectMany(p => _dataStore.OrderItems.Where(oi => oi.ProductId == p.Id))
-                .Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
+            ProductCount = productsByCategory.TryGetValue(c.Id, out var products) ? products.Count : 0,
+            TotalRevenue = productsByCategory.TryGetValue(c.Id, out var categoryProducts)
+                ? categoryProducts
+                    .SelectMany(p => _dataStore.OrderItems.Where(oi => oi.ProductId == p.Id))
+                    .Sum(oi => oi.Quantity * oi.UnitPrice * (1 - oi.Discount / 100))
+                : 0m
         });
 
         return Ok(new

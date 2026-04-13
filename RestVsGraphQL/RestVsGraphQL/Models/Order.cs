@@ -9,6 +9,15 @@ public class Order
     public string Status { get; set; } = "Pending";
     public decimal TotalAmount { get; set; }
     public List<OrderItem> Items { get; set; } = new();
+
+    /// <summary>
+    /// Recalculates the total amount based on order items.
+    /// Formula: Sum(Quantity × UnitPrice × (1 - Discount/100))
+    /// </summary>
+    public void RecalculateTotal()
+    {
+        TotalAmount = Items.Sum(item => item.Quantity * item.UnitPrice * (1 - item.Discount / 100));
+    }
 }
 
 public class OrderItem

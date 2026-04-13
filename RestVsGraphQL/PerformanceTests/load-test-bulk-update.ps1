@@ -1,12 +1,12 @@
-# REST vs GraphQL - Bulk Operations Load Test
+# REST vs GraphQL - Bulk UPDATE Operations Load Test
 param(
     [string]$BaseUrl = "http://localhost:5072",
-    [int]$Iterations = 50,
+    [int]$Iterations = 25,
     [int]$OrdersPerBulk = 10
 )
 
 Write-Host "================================================================" -ForegroundColor Cyan
-Write-Host "     Bulk Operations Load Test - REST vs GraphQL" -ForegroundColor Cyan
+Write-Host "     Bulk UPDATE Operations - REST vs GraphQL" -ForegroundColor Cyan
 Write-Host "================================================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -22,14 +22,12 @@ catch {
     exit 1
 }
 
-# Note: Metrics reset and scenario setting handled by launch-tests.ps1
-
 Write-Host ""
 Write-Host "Test Configuration:" -ForegroundColor Yellow
 Write-Host "  Base URL: $BaseUrl"
 Write-Host "  Iterations: $Iterations"
 Write-Host "  Orders per bulk request: $OrdersPerBulk"
-Write-Host "  Total orders to create: $($Iterations * $OrdersPerBulk)"
+Write-Host "  Total orders to update: $($Iterations * $OrdersPerBulk)"
 Write-Host ""
 
 function Invoke-BulkTest {
@@ -42,13 +40,13 @@ function Invoke-BulkTest {
     Write-Host "Testing: $Name" -ForegroundColor Cyan
     $successCount = 0
     $errorCount = 0
-    $totalOrdersCreated = 0
+    $totalOrdersUpdated = 0
     
     for ($i = 1; $i -le $Count; $i++) {
         try {
             $result = & $Request -url $BaseUrl -ordersCount $OrdersPerBulk
             $successCount++
-            $totalOrdersCreated += $OrdersPerBulk
+            $totalOrdersUpdated += $OrdersPerBulk
         }
         catch {
             $errorCount++
@@ -63,72 +61,15 @@ function Invoke-BulkTest {
     
     Write-Progress -Activity "Bulk Testing: $Name" -Completed
     Write-Host "  Completed: $successCount successful bulk requests" -ForegroundColor Green
-    Write-Host "  Orders created: $totalOrdersCreated" -ForegroundColor Green
+    Write-Host "  Orders updated: $totalOrdersUpdated" -ForegroundColor Green
     Write-Host "  Errors: $errorCount" -ForegroundColor $(if ($errorCount -gt 0) { "Red" } else { "Green" })
     Write-Host ""
 }
 
-# Test 1: REST Bulk Create
-Write-Host "`n=== Test 1: REST Bulk Create Orders ===" -ForegroundColor White
+# Test 1: REST Bulk Update
+Write-Host "`n=== Test 1: REST Bulk Update Orders ===" -ForegroundColor White
 
-Invoke-BulkTest -Name "REST - Bulk Create ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
-    param($url, $ordersCount)
-    
-    $orders = @()
-    for ($i = 1; $i -le $ordersCount; $i++) {
-        $customerId = (($i % 5) + 1)
-        $orders += @{
-            customerId = $customerId
-            status = "Pending"
-            items = @(
-                @{
-                    productId = (($i % 8) + 1)
-                    quantity = [int](Get-Random -Minimum 1 -Maximum 5)
-                    discount = [int](Get-Random -Minimum 0 -Maximum 20)
-                    notes = @("Bulk test order $i", "Load test iteration")
-                }
-            )
-        }
-    }
-    
-    $bulkData = @{ orders = $orders } | ConvertTo-Json -Depth 10
-    Invoke-RestMethod -Uri "$url/api/orders/bulk" -Method Post -Body $bulkData -ContentType "application/json" -ErrorAction Stop
-}
-
-# Test 2: GraphQL Bulk Create
-Write-Host "`n=== Test 2: GraphQL Bulk Create Orders ===" -ForegroundColor White
-
-Invoke-BulkTest -Name "GraphQL - Bulk Create ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
-    param($url, $ordersCount)
-    
-    $orders = @()
-    for ($i = 1; $i -le $ordersCount; $i++) {
-        $customerId = (($i % 5) + 1)
-        $orders += @{
-            customerId = $customerId
-            status = "Pending"
-            items = @(
-                @{
-                    productId = (($i % 8) + 1)
-                    quantity = [int](Get-Random -Minimum 1 -Maximum 5)
-                    discount = [double](Get-Random -Minimum 0 -Maximum 20)
-                    notes = @("Bulk test order $i", "Load test iteration")
-                }
-            )
-        }
-    }
-    
-    $mutation = "mutation(`$request: BulkOrderCreateRequestInput!) { bulkCreateOrders(request: `$request) { successCount failureCount errors createdIds } }"
-    $variables = @{ request = @{ orders = $orders } }
-    $graphqlRequest = @{ query = $mutation; variables = $variables } | ConvertTo-Json -Depth 10
-    
-    Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlRequest -ContentType "application/json" -ErrorAction Stop
-}
-
-# Test 3: REST Bulk Update
-Write-Host "`n=== Test 3: REST Bulk Update Orders ===" -ForegroundColor White
-
-Invoke-BulkTest -Name "REST - Bulk Update (updating recent orders)" -Count ([Math]::Max(1, [Math]::Floor($Iterations / 2))) -Request {
+Invoke-BulkTest -Name "REST - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
     param($url, $ordersCount)
     
     # Get recent orders
@@ -147,18 +88,18 @@ Invoke-BulkTest -Name "REST - Bulk Update (updating recent orders)" -Count ([Mat
     Invoke-RestMethod -Uri "$url/api/orders/bulk" -Method Put -Body $bulkUpdateData -ContentType "application/json" -ErrorAction Stop
 }
 
-# Test 4: GraphQL Bulk Update
-Write-Host "`n=== Test 4: GraphQL Bulk Update Orders ===" -ForegroundColor White
+# Test 2: GraphQL Bulk Update
+Write-Host "`n=== Test 2: GraphQL Bulk Update Orders ===" -ForegroundColor White
 
-Invoke-BulkTest -Name "GraphQL - Bulk Update (updating recent orders)" -Count ([Math]::Max(1, [Math]::Floor($Iterations / 2))) -Request {
+Invoke-BulkTest -Name "GraphQL - Bulk Update ($OrdersPerBulk orders per request)" -Count $Iterations -Request {
     param($url, $ordersCount)
-
+    
     # Get recent orders via GraphQL
     $query = "{ orders { id status } }"
     $graphqlQuery = @{ query = $query } | ConvertTo-Json
     $ordersResponse = Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlQuery -ContentType "application/json" -ErrorAction Stop
     $recentOrders = $ordersResponse.data.orders | Select-Object -First $ordersCount
-
+    
     $updates = @()
     foreach ($order in $recentOrders) {
         $updates += @{
@@ -166,67 +107,24 @@ Invoke-BulkTest -Name "GraphQL - Bulk Update (updating recent orders)" -Count ([
             status = @("Pending", "Processing", "Shipped", "Completed")[(Get-Random -Minimum 0 -Maximum 4)]
         }
     }
-
+    
     $mutation = "mutation(`$request: BulkOrderUpdateRequestInput!) { bulkUpdateOrders(request: `$request) { successCount failureCount errors } }"
     $variables = @{ request = @{ orders = $updates } }
     $graphqlRequest = @{ query = $mutation; variables = $variables } | ConvertTo-Json -Depth 10
-
-    Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlRequest -ContentType "application/json" -ErrorAction Stop
-}
-
-# Test 5: REST Bulk Delete
-Write-Host "`n=== Test 5: REST Bulk Delete Orders ===" -ForegroundColor White
-
-Invoke-BulkTest -Name "REST - Bulk Delete (deleting old orders)" -Count ([Math]::Max(1, [Math]::Floor($Iterations / 3))) -Request {
-    param($url, $ordersCount)
-
-    # Get oldest orders to delete
-    $allOrders = Invoke-RestMethod -Uri "$url/api/orders" -Method Get -ErrorAction Stop
-    $oldOrders = $allOrders | Select-Object -Last $ordersCount
-
-    $orderIds = @()
-    foreach ($order in $oldOrders) {
-        $orderIds += $order.id
-    }
-
-    $bulkDeleteData = @{ orderIds = $orderIds } | ConvertTo-Json -Depth 10
-    Invoke-RestMethod -Uri "$url/api/orders/bulk" -Method Delete -Body $bulkDeleteData -ContentType "application/json" -ErrorAction Stop
-}
-
-# Test 6: GraphQL Bulk Delete
-Write-Host "`n=== Test 6: GraphQL Bulk Delete Orders ===" -ForegroundColor White
-
-Invoke-BulkTest -Name "GraphQL - Bulk Delete (deleting old orders)" -Count ([Math]::Max(1, [Math]::Floor($Iterations / 3))) -Request {
-    param($url, $ordersCount)
-
-    # Get oldest orders via GraphQL
-    $query = "{ orders { id } }"
-    $graphqlQuery = @{ query = $query } | ConvertTo-Json
-    $ordersResponse = Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlQuery -ContentType "application/json" -ErrorAction Stop
-    $oldOrders = $ordersResponse.data.orders | Select-Object -Last $ordersCount
-
-    $orderIds = @()
-    foreach ($order in $oldOrders) {
-        $orderIds += $order.id
-    }
-
-    $mutation = "mutation(`$request: BulkOrderDeleteRequestInput!) { bulkDeleteOrders(request: `$request) { successCount failureCount errors deletedIds } }"
-    $variables = @{ request = @{ orderIds = $orderIds } }
-    $graphqlRequest = @{ query = $mutation; variables = $variables } | ConvertTo-Json -Depth 10
-
+    
     Invoke-RestMethod -Uri "$url/graphql" -Method Post -Body $graphqlRequest -ContentType "application/json" -ErrorAction Stop
 }
 
 # Collect and Display Results
 Write-Host "`n================================================================" -ForegroundColor Cyan
-Write-Host "Collecting Bulk Operations Metrics..." -ForegroundColor Yellow
+Write-Host "Collecting Bulk UPDATE Metrics..." -ForegroundColor Yellow
 Start-Sleep -Seconds 2
 
 try {
     $comparison = Invoke-RestMethod -Uri "$BaseUrl/api/metrics/comparison" -Method Get -ErrorAction Stop
     
     Write-Host "`n================================================================" -ForegroundColor Green
-    Write-Host "           BULK OPERATIONS - KPI COMPARISON RESULTS" -ForegroundColor Green
+    Write-Host "           BULK UPDATE - KPI COMPARISON RESULTS" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
     
     Write-Host "`nWINNERS:" -ForegroundColor Yellow
@@ -253,7 +151,7 @@ try {
         Write-Host "larger" -ForegroundColor Red
     }
     
-    Write-Host "`nREST API - BULK OPERATIONS:" -ForegroundColor Red
+    Write-Host "`nREST API - BULK UPDATE:" -ForegroundColor Red
     Write-Host "  Total Requests:     $($comparison.restMetrics.totalRequests)"
     Write-Host "  Success Rate:       $($comparison.restMetrics.successRate.ToString('F2'))%"
     Write-Host "  Avg Response Time:  $($comparison.restMetrics.averageResponseTimeMs.ToString('F2')) ms"
@@ -261,7 +159,7 @@ try {
     Write-Host "  Avg Payload:        $($comparison.restMetrics.averageResponseSizeBytes.ToString('F0')) bytes"
     Write-Host "  Throughput:         $($comparison.restMetrics.requestsPerSecond.ToString('F2')) req/s"
     
-    Write-Host "`nGraphQL API - BULK OPERATIONS:" -ForegroundColor Magenta
+    Write-Host "`nGraphQL API - BULK UPDATE:" -ForegroundColor Magenta
     Write-Host "  Total Requests:     $($comparison.graphQLMetrics.totalRequests)"
     Write-Host "  Success Rate:       $($comparison.graphQLMetrics.successRate.ToString('F2'))%"
     Write-Host "  Avg Response Time:  $($comparison.graphQLMetrics.averageResponseTimeMs.ToString('F2')) ms"
@@ -271,8 +169,8 @@ try {
     
     # Calculate bulk operation efficiency
     $totalOrders = $Iterations * $OrdersPerBulk
-    Write-Host "`nBULK EFFICIENCY:" -ForegroundColor Cyan
-    Write-Host "  Total Orders Created: ~$totalOrders"
+    Write-Host "`nBULK UPDATE EFFICIENCY:" -ForegroundColor Cyan
+    Write-Host "  Total Orders Updated: ~$totalOrders"
     Write-Host "  REST Efficiency:      $(($totalOrders / $comparison.restMetrics.totalRequests).ToString('F2')) orders/request"
     Write-Host "  GraphQL Efficiency:   $(($totalOrders / $comparison.graphQLMetrics.totalRequests).ToString('F2')) orders/request"
     
@@ -284,12 +182,10 @@ catch {
 }
 
 Write-Host "`n================================================================" -ForegroundColor Cyan
-Write-Host "Bulk operations load testing completed!" -ForegroundColor Green
+Write-Host "Bulk UPDATE operations testing completed!" -ForegroundColor Green
 Write-Host ""
 Write-Host "Summary:" -ForegroundColor Yellow
-Write-Host "  - Tested bulk CREATE operations ($Iterations iterations)" -ForegroundColor White
-Write-Host "  - Tested bulk UPDATE operations ($([Math]::Floor($Iterations / 2)) iterations)" -ForegroundColor White
+Write-Host "  - Tested bulk UPDATE operations ($Iterations iterations)" -ForegroundColor White
 Write-Host "  - Each bulk request processed $OrdersPerBulk orders" -ForegroundColor White
-Write-Host "  - Total orders created: ~$($Iterations * $OrdersPerBulk)" -ForegroundColor White
+Write-Host "  - Total orders updated: ~$($Iterations * $OrdersPerBulk)" -ForegroundColor White
 Write-Host ""
-

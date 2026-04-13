@@ -10,10 +10,12 @@ namespace RestVsGraphQL.Controllers;
 public class OrdersController : ControllerBase
 {
     private readonly DataStore _dataStore;
+    private readonly OrderService _orderService;
 
-    public OrdersController(DataStore dataStore)
+    public OrdersController(DataStore dataStore, OrderService orderService)
     {
         _dataStore = dataStore;
+        _orderService = orderService;
     }
 
     [HttpGet]
@@ -29,14 +31,8 @@ public class OrdersController : ControllerBase
         if (order == null)
             return NotFound();
 
-        order.Customer = _dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-        order.Items = _dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-        
-        foreach (var item in order.Items)
-        {
-            item.Product = _dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
-            item.Notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-        }
+        // Use extension method for loading relations
+        order.LoadRelations(_dataStore);
 
         return Ok(order);
     }
@@ -48,18 +44,8 @@ public class OrdersController : ControllerBase
         if (order == null)
             return NotFound();
 
-        order.Customer = _dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-        order.Items = _dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-
-        foreach (var item in order.Items)
-        {
-            item.Product = _dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
-            if (item.Product != null)
-            {
-                item.Product.Category = _dataStore.Categories.FirstOrDefault(c => c.Id == item.Product.CategoryId);
-            }
-            item.Notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-        }
+        // Use extension method with category loading (4-level nesting)
+        order.LoadRelations(_dataStore, includeCategory: true);
 
         return Ok(order);
     }
@@ -81,17 +67,8 @@ public class OrdersController : ControllerBase
 
         var orders = _dataStore.Orders.Where(o => orderIds.Contains(o.Id)).ToList();
 
-        foreach (var order in orders)
-        {
-            order.Customer = _dataStore.Customers.FirstOrDefault(c => c.Id == order.CustomerId);
-            order.Items = _dataStore.OrderItems.Where(oi => oi.OrderId == order.Id).ToList();
-
-            foreach (var item in order.Items)
-            {
-                item.Product = _dataStore.Products.FirstOrDefault(p => p.Id == item.ProductId);
-                item.Notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-            }
-        }
+        // Use extension method for batch loading
+        orders.LoadRelations(_dataStore);
 
         return Ok(orders);
     }
@@ -99,191 +76,21 @@ public class OrdersController : ControllerBase
     [HttpPost("bulk")]
     public ActionResult<BulkOperationResult> BulkCreateOrders([FromBody] BulkOrderCreateRequest request)
     {
-        var result = new BulkOperationResult();
-
-        foreach (var orderDto in request.Orders)
-        {
-            try
-            {
-                var customer = _dataStore.Customers.FirstOrDefault(c => c.Id == orderDto.CustomerId);
-                if (customer == null)
-                {
-                    result.FailureCount++;
-                    result.Errors.Add($"Customer {orderDto.CustomerId} not found");
-                    continue;
-                }
-
-                var order = new Order
-                {
-                    Id = _dataStore.GetNextOrderId(),
-                    CustomerId = orderDto.CustomerId,
-                    Customer = customer,
-                    OrderDate = DateTime.UtcNow,
-                    Status = orderDto.Status
-                };
-
-                foreach (var itemDto in orderDto.Items)
-                {
-                    var product = _dataStore.Products.FirstOrDefault(p => p.Id == itemDto.ProductId);
-                    if (product == null)
-                    {
-                        result.Errors.Add($"Product {itemDto.ProductId} not found for order");
-                        continue;
-                    }
-
-                    var orderItem = new OrderItem
-                    {
-                        Id = _dataStore.GetNextOrderItemId(),
-                        OrderId = order.Id,
-                        ProductId = itemDto.ProductId,
-                        Product = product,
-                        Quantity = itemDto.Quantity,
-                        UnitPrice = product.Price,
-                        Discount = itemDto.Discount
-                    };
-
-                    foreach (var noteContent in itemDto.Notes)
-                    {
-                        var note = new OrderItemNote
-                        {
-                            Id = _dataStore.GetNextOrderItemNoteId(),
-                            OrderItemId = orderItem.Id,
-                            Content = noteContent,
-                            CreatedAt = DateTime.UtcNow
-                        };
-                        orderItem.Notes.Add(note);
-                        _dataStore.OrderItemNotes.Add(note);
-                    }
-
-                    order.Items.Add(orderItem);
-                    _dataStore.OrderItems.Add(orderItem);
-                }
-
-                order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice * (1 - i.Discount / 100));
-                _dataStore.Orders.Add(order);
-                result.SuccessCount++;
-                result.CreatedIds.Add(order.Id);
-            }
-            catch (Exception ex)
-            {
-                result.FailureCount++;
-                result.Errors.Add(ex.Message);
-            }
-        }
-
-        return Ok(result);
+        // Delegate to service layer (shared with GraphQL)
+        return Ok(_orderService.BulkCreateOrders(request));
     }
 
     [HttpPut("bulk")]
     public ActionResult<BulkOperationResult> BulkUpdateOrders([FromBody] BulkOrderUpdateRequest request)
     {
-        var result = new BulkOperationResult();
-
-        foreach (var orderDto in request.Orders)
-        {
-            try
-            {
-                var order = _dataStore.Orders.FirstOrDefault(o => o.Id == orderDto.Id);
-                if (order == null)
-                {
-                    result.FailureCount++;
-                    result.Errors.Add($"Order {orderDto.Id} not found");
-                    continue;
-                }
-
-                if (orderDto.Status != null)
-                {
-                    order.Status = orderDto.Status;
-                }
-
-                if (orderDto.Items != null)
-                {
-                    foreach (var itemDto in orderDto.Items)
-                    {
-                        if (itemDto.Id.HasValue)
-                        {
-                            var existingItem = _dataStore.OrderItems.FirstOrDefault(oi => oi.Id == itemDto.Id.Value);
-                            if (existingItem != null)
-                            {
-                                existingItem.Quantity = itemDto.Quantity;
-                                existingItem.Discount = itemDto.Discount;
-                            }
-                        }
-                        else
-                        {
-                            var product = _dataStore.Products.FirstOrDefault(p => p.Id == itemDto.ProductId);
-                            if (product != null)
-                            {
-                                var newItem = new OrderItem
-                                {
-                                    Id = _dataStore.GetNextOrderItemId(),
-                                    OrderId = order.Id,
-                                    ProductId = itemDto.ProductId,
-                                    Product = product,
-                                    Quantity = itemDto.Quantity,
-                                    UnitPrice = product.Price,
-                                    Discount = itemDto.Discount
-                                };
-                                _dataStore.OrderItems.Add(newItem);
-                                order.Items.Add(newItem);
-                            }
-                        }
-                    }
-
-                    order.TotalAmount = order.Items.Sum(i => i.Quantity * i.UnitPrice * (1 - i.Discount / 100));
-                }
-
-                result.SuccessCount++;
-            }
-            catch (Exception ex)
-            {
-                result.FailureCount++;
-                result.Errors.Add(ex.Message);
-            }
-        }
-
-        return Ok(result);
+        // Delegate to service layer (shared with GraphQL)
+        return Ok(_orderService.BulkUpdateOrders(request));
     }
 
     [HttpDelete("bulk")]
     public ActionResult<BulkOperationResult> BulkDeleteOrders([FromBody] BulkOrderDeleteRequest request)
     {
-        var result = new BulkOperationResult();
-
-        foreach (var orderId in request.OrderIds)
-        {
-            try
-            {
-                var order = _dataStore.Orders.FirstOrDefault(o => o.Id == orderId);
-                if (order == null)
-                {
-                    result.FailureCount++;
-                    result.Errors.Add($"Order {orderId} not found");
-                    continue;
-                }
-
-                var orderItems = _dataStore.OrderItems.Where(oi => oi.OrderId == orderId).ToList();
-                foreach (var item in orderItems)
-                {
-                    var notes = _dataStore.OrderItemNotes.Where(n => n.OrderItemId == item.Id).ToList();
-                    foreach (var note in notes)
-                    {
-                        _dataStore.OrderItemNotes.Remove(note);
-                    }
-                    _dataStore.OrderItems.Remove(item);
-                }
-
-                _dataStore.Orders.Remove(order);
-                result.SuccessCount++;
-                result.DeletedIds.Add(orderId);
-            }
-            catch (Exception ex)
-            {
-                result.FailureCount++;
-                result.Errors.Add(ex.Message);
-            }
-        }
-
-        return Ok(result);
+        // Delegate to service layer (shared with GraphQL)
+        return Ok(_orderService.BulkDeleteOrders(request));
     }
 }

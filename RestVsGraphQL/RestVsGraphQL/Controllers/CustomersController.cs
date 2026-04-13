@@ -6,39 +6,24 @@ namespace RestVsGraphQL.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class CustomersController : ControllerBase
+public class CustomersController : BaseEntityController<Customer>
 {
-    private readonly DataStore _dataStore;
-
-    public CustomersController(DataStore dataStore)
+    public CustomersController(DataStore dataStore) : base(dataStore)
     {
-        _dataStore = dataStore;
     }
 
-    [HttpGet]
-    public ActionResult<IEnumerable<Customer>> GetCustomers()
-    {
-        return Ok(_dataStore.Customers);
-    }
+    protected override IEnumerable<Customer> GetCollection() => DataStore.Customers;
 
-    [HttpGet("{id}")]
-    public ActionResult<Customer> GetCustomer(int id)
-    {
-        var customer = _dataStore.Customers.FirstOrDefault(c => c.Id == id);
-        if (customer == null)
-            return NotFound();
-
-        return Ok(customer);
-    }
+    protected override Customer? FindById(int id) => DataStore.Customers.FirstOrDefault(c => c.Id == id);
 
     [HttpGet("{id}/orders")]
     public ActionResult<IEnumerable<Order>> GetCustomerOrders(int id)
     {
-        var customer = _dataStore.Customers.FirstOrDefault(c => c.Id == id);
+        var customer = DataStore.Customers.FirstOrDefault(c => c.Id == id);
         if (customer == null)
             return NotFound();
 
-        var orders = _dataStore.Orders.Where(o => o.CustomerId == id).ToList();
+        var orders = DataStore.Orders.Where(o => o.CustomerId == id).ToList();
         return Ok(orders);
     }
 }
