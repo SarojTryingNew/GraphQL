@@ -1,7 +1,11 @@
-using RestVsGraphQL.GraphQL;
 using RestVsGraphQL.Services;
 using RestVsGraphQL.Metrics;
 using RestVsGraphQL.Middleware;
+using RestVsGraphQL.GraphQL.DataLoaders.ECO;
+using RestVsGraphQL.GraphQL.DataLoaders.POC;
+using RestVsGraphQL.GraphQL.Query;
+using RestVsGraphQL.GraphQL.Mutation;
+using RestVsGraphQL.GraphQL.Types.ECO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,14 +49,53 @@ builder.Services
     .AddGraphQLServer()
     .AddQueryType<Query>()
     .AddMutationType<Mutation>()
+    .AddFiltering()      // Enable [UseFiltering] attribute
+    // Add DeviceApplication Query and Mutation extensions
+    .AddTypeExtension<DeviceApplicationQueries>()
+    .AddTypeExtension<DeviceApplicationExtendedQueries>()
+    .AddTypeExtension<DeviceApplicationMutations>()
+    // Add DeviceApplication Types with field resolvers
+    .AddType<DeviceApplicationType>()
+    .AddType<FunctionGroupType>()
+    .AddType<FunctionType>()
+    .AddType<FunctionBlockType>()
+    .AddType<SignalType>()
+    .AddType<SubsignalType>()
+    .AddType<CdcConversionType>()
+    .AddType<RoutingType>()
     // Register DataLoaders for efficient batching
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CustomerByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.CategoryByIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemsByOrderIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrderItemNotesByOrderItemIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.OrdersByCustomerIdDataLoader>()
-    .AddDataLoader<RestVsGraphQL.GraphQL.DataLoaders.ProductsByCategoryIdDataLoader>();
+    .AddDataLoader<CustomerByIdDataLoader>()
+    .AddDataLoader<ProductByIdDataLoader>()
+    .AddDataLoader<CategoryByIdDataLoader>()
+    .AddDataLoader<OrderItemsByOrderIdDataLoader>()
+    .AddDataLoader<OrderItemNotesByOrderItemIdDataLoader>()
+    .AddDataLoader<OrdersByCustomerIdDataLoader>()
+    .AddDataLoader<ProductsByCategoryIdDataLoader>()
+    // DeviceApplication DataLoaders
+    .AddDataLoader<FunctionGroupsByDeviceDataLoader>()
+    .AddDataLoader<FunctionBlocksByDeviceDataLoader>()
+    .AddDataLoader<FunctionsByFunctionGroupDataLoader>()
+    .AddDataLoader<SignalsByFunctionBlockDataLoader>()
+    .AddDataLoader<SubsignalsBySignalDataLoader>()
+    .AddDataLoader<CdcConversionsBySignalDataLoader>()
+    .AddDataLoader<RoutingsByParentPathDataLoader>()
+    // NEW: Missing DataLoaders added
+    .AddDataLoader<FunctionBlocksByFunctionGroupDataLoader>()
+    .AddDataLoader<FunctionBlocksByFunctionDataLoader>()
+    .AddDataLoader<SignalsByFunctionDataLoader>()
+    // Scenario 7: Statistical DataLoaders for Device Statistics Dashboard
+    .AddDataLoader<FunctionGroupCountByDeviceDataLoader>()
+    .AddDataLoader<FunctionBlockCountByDeviceDataLoader>()
+    .AddDataLoader<FunctionCountByDeviceDataLoader>()
+    .AddDataLoader<SignalCountByDeviceDataLoader>()
+    .AddDataLoader<AnalogSignalCountByDeviceDataLoader>()
+    .AddDataLoader<StatusSignalCountByDeviceDataLoader>()
+    .AddDataLoader<SubsignalCountByDeviceDataLoader>()
+    .AddDataLoader<CdcConversionCountByDeviceDataLoader>()
+    .AddDataLoader<RoutingCountByDeviceDataLoader>()
+    .AddDataLoader<HasConfigurationByDeviceDataLoader>()
+    .AddDataLoader<ConfiguredRoutingCountByDeviceDataLoader>()
+    .AddDataLoader<EditableRoutingCountByDeviceDataLoader>();
 
 var app = builder.Build();
 

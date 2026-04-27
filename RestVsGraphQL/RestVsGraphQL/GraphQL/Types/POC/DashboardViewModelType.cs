@@ -1,7 +1,7 @@
 using RestVsGraphQL.Models;
 using RestVsGraphQL.Services;
 
-namespace RestVsGraphQL.GraphQL.Types;
+namespace RestVsGraphQL.GraphQL.Types.POC;
 
 /// <summary>
 /// Type extension for DashboardViewModel with field resolvers.

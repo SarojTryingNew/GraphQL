@@ -1,7 +1,7 @@
-using RestVsGraphQL.GraphQL.DataLoaders;
+using RestVsGraphQL.GraphQL.DataLoaders.POC;
 using RestVsGraphQL.Models;
 
-namespace RestVsGraphQL.GraphQL.Types;
+namespace RestVsGraphQL.GraphQL.Types.POC;
 
 /// <summary>
 /// Type extension for OrderItem that adds field resolvers for navigation properties.

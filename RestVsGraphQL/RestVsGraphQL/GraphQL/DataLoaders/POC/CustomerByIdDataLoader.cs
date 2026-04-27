@@ -1,7 +1,7 @@
 using RestVsGraphQL.Models;
 using RestVsGraphQL.Services;
 
-namespace RestVsGraphQL.GraphQL.DataLoaders;
+namespace RestVsGraphQL.GraphQL.DataLoaders.POC;
 
 /// <summary>
 /// DataLoader for batching Customer lookups by ID.
