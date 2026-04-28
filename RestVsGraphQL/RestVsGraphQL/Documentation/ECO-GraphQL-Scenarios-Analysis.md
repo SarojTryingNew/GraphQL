@@ -68,9 +68,11 @@ This document provides a comprehensive analysis of **39 GraphQL benefit scenario
 ### 🔴 Category 1: Advanced Filtering & Search (6 scenarios - HIGH PRIORITY)
 
 #### ❌ **Scenario 1: Multi-Criteria Signal Search**
+
 **Business Value:** Engineers need to find specific signals across all devices based on type, CDC, or configuration status.
 
 **GraphQL Query:**
+
 ```graphql
 query SearchSignals {
   signals(
@@ -94,6 +96,7 @@ query SearchSignals {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to DeviceApplicationQueries.cs
 public IEnumerable<SignalDto> GetSignals(
@@ -122,9 +125,11 @@ public IEnumerable<SignalDto> GetSignals(
 ---
 
 #### ❌ **Scenario 2: Find All Devices Using Specific CDC Types**
+
 **Business Value:** Standardization audit - identify which devices use specific IEC 61850 Common Data Classes.
 
 **GraphQL Query:**
+
 ```graphql
 query DevicesByCDC {
   deviceApplications {
@@ -142,6 +147,7 @@ query DevicesByCDC {
 ```
 
 **Implementation Required:**
+
 - HotChocolate filtering on nested collections
 - OR custom field resolver
 
@@ -150,9 +156,11 @@ query DevicesByCDC {
 ---
 
 #### ❌ **Scenario 3: Search by Display Text (Fuzzy Search)**
+
 **Business Value:** Users search for devices/groups by description, not just technical names.
 
 **GraphQL Query:**
+
 ```graphql
 query SearchByDisplayText($searchText: String!) {
   deviceApplications(where: { displayText: { contains: $searchText } }) {
@@ -167,6 +175,7 @@ query SearchByDisplayText($searchText: String!) {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add HotChocolate filtering
 [UseFiltering]
@@ -181,9 +190,11 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataSto
 ---
 
 #### ❌ **Scenario 4: Find Editable vs Read-Only Routings**
+
 **Business Value:** Configuration UI shows only parameters user can modify.
 
 **GraphQL Query:**
+
 ```graphql
 query EditableRoutings {
   deviceApplications {
@@ -202,6 +213,7 @@ query EditableRoutings {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to DeviceApplicationQueries.cs
 public IEnumerable<RoutingDto> GetEditableRoutings(
@@ -218,9 +230,11 @@ public IEnumerable<RoutingDto> GetEditableRoutings(
 ---
 
 #### ❌ **Scenario 5: Type-Based Device Grouping**
+
 **Business Value:** Filter devices by type (ProtectionRelay, ControlUnit, etc.) in single query.
 
 **GraphQL Query:**
+
 ```graphql
 query DevicesByType {
   protectionRelays: deviceApplications(where: { typeName: { eq: "ProtectionRelay" } }) {
@@ -236,6 +250,7 @@ query DevicesByType {
 ```
 
 **Implementation Required:**
+
 ```csharp
 [UseFiltering]
 public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataStore dataStore)
@@ -249,9 +264,11 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataSto
 ---
 
 #### ❌ **Scenario 6: Recently Modified Devices**
+
 **Business Value:** Track recent changes for audit and review.
 
 **GraphQL Query:**
+
 ```graphql
 query RecentlyModified {
   deviceApplications(
@@ -267,6 +284,7 @@ query RecentlyModified {
 ```
 
 **Implementation Required:**
+
 ```csharp
 [UseFiltering]
 [UseSorting]
@@ -283,9 +301,11 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataSto
 ### 🔴 Category 2: Aggregations & Analytics (5 scenarios - HIGH PRIORITY)
 
 #### ❌ **Scenario 7: Device Statistics Dashboard**
+
 **Business Value:** Single query provides complete device statistics for dashboard.
 
 **GraphQL Query:**
+
 ```graphql
 query DeviceStatistics {
   deviceApplications {
@@ -301,6 +321,7 @@ query DeviceStatistics {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to DeviceApplicationTypes.cs
 public class DeviceApplicationType : ObjectType<DeviceApplicationDto>
@@ -376,9 +397,11 @@ public class DeviceApplicationType : ObjectType<DeviceApplicationDto>
 ---
 
 #### ❌ **Scenario 8: Signal Type Distribution**
+
 **Business Value:** Analyze signal composition per device.
 
 **GraphQL Query:**
+
 ```graphql
 query SignalTypeStats {
   deviceApplication(publicTechnicalName: "IED_001") {
@@ -397,6 +420,7 @@ query SignalTypeStats {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Create SignalStatsDto
 public record SignalStatsDto
@@ -442,9 +466,11 @@ descriptor
 ---
 
 #### ❌ **Scenario 9: Configuration Coverage Report**
+
 **Business Value:** Track which signals have routing configurations vs unconfigured.
 
 **GraphQL Query:**
+
 ```graphql
 query ConfigCoverage {
   deviceApplications {
@@ -462,9 +488,11 @@ query ConfigCoverage {
 ---
 
 #### ❌ **Scenario 10: Version Summary**
+
 **Business Value:** Identify which devices use which DDD versions (upgrade planning).
 
 **GraphQL Query:**
+
 ```graphql
 query VersionSummary {
   versionStats {
@@ -479,6 +507,7 @@ query VersionSummary {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<VersionStatsDto> GetVersionStats([Service] DataStore dataStore)
 {
@@ -498,9 +527,11 @@ public IEnumerable<VersionStatsDto> GetVersionStats([Service] DataStore dataStor
 ---
 
 #### ❌ **Scenario 11: Routing Options Analysis**
+
 **Business Value:** Identify routings with configurable options.
 
 **GraphQL Query:**
+
 ```graphql
 query RoutingOptions {
   routings {
@@ -520,9 +551,11 @@ query RoutingOptions {
 ### 🔴 Category 3: Bulk Operations & Batch Queries (4 scenarios - HIGH PRIORITY)
 
 #### ❌ **Scenario 12: Batch Device Lookup**
+
 **Business Value:** Compare/view multiple devices simultaneously.
 
 **GraphQL Query:**
+
 ```graphql
 query MultipleDevices {
   device1: deviceApplication(publicTechnicalName: "IED_001") {
@@ -551,9 +584,11 @@ query MultipleDevices {
 ---
 
 #### ❌ **Scenario 13: Bulk Signal Configuration Update**
+
 **Business Value:** Update multiple routing values in single request.
 
 **GraphQL Mutation:**
+
 ```graphql
 mutation UpdateMultipleRoutings {
   updateRouting1: updateRouting(
@@ -582,9 +617,11 @@ mutation UpdateMultipleRoutings {
 ---
 
 #### ❌ **Scenario 14: Compare Multiple Devices Side-by-Side**
+
 **Business Value:** Device comparison for migration planning.
 
 **GraphQL Query:**
+
 ```graphql
 query CompareDevices {
   comparison: compareDevices(
@@ -604,6 +641,7 @@ query CompareDevices {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<DeviceComparisonDto> CompareDevices(
     List<string> publicTechnicalNames,
@@ -631,9 +669,11 @@ public IEnumerable<DeviceComparisonDto> CompareDevices(
 ---
 
 #### ❌ **Scenario 15: Batch Validation Check**
+
 **Business Value:** Validate multiple devices before deployment.
 
 **GraphQL Query:**
+
 ```graphql
 query ValidateDevices {
   validateDevices(publicTechnicalNames: ["IED_001", "IED_002", "IED_003"]) {
@@ -649,6 +689,7 @@ query ValidateDevices {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<DeviceValidationResultDto> ValidateDevices(
     List<string> publicTechnicalNames,
@@ -669,9 +710,11 @@ public IEnumerable<DeviceValidationResultDto> ValidateDevices(
 ### 🌳 Category 4: Hierarchical Navigation (3 scenarios - MEDIUM PRIORITY)
 
 #### ❌ **Scenario 16: Full Device Tree Export**
+
 **Business Value:** Export complete device configuration for backup/migration.
 
 **GraphQL Query:**
+
 ```graphql
 query FullDeviceTree {
   deviceApplication(publicTechnicalName: "IED_001") {
@@ -704,7 +747,8 @@ query FullDeviceTree {
 
 **Current Status:** ✅ **Already works!** (Field resolvers + DataLoaders handle this)
 
-**Performance:** 
+**Performance:**
+
 - REST: 10+ sequential requests
 - GraphQL: 1 request, 6 batched DB queries
 
@@ -713,9 +757,11 @@ query FullDeviceTree {
 ---
 
 #### ❌ **Scenario 17: Path-Based Navigation**
+
 **Business Value:** Navigate device hierarchy using unified path interface.
 
 **GraphQL Query:**
+
 ```graphql
 query NavigateByPath {
   nodeByPath(ptnPath: "IED_001/MMXU1/TotW") {
@@ -737,6 +783,7 @@ query NavigateByPath {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public object? GetNodeByPath(string ptnPath, [Service] DataStore dataStore)
 {
@@ -761,9 +808,11 @@ public object? GetNodeByPath(string ptnPath, [Service] DataStore dataStore)
 ---
 
 #### ❌ **Scenario 18: Breadcrumb Generation**
+
 **Business Value:** UI breadcrumb navigation for deep hierarchies.
 
 **GraphQL Query:**
+
 ```graphql
 query GetBreadcrumbs {
   signal(ptnPath: "IED_001/XCBR1/Pos/stVal") {
@@ -779,6 +828,7 @@ query GetBreadcrumbs {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to SignalBaseDto or compute in resolver
 descriptor
@@ -812,9 +862,11 @@ descriptor
 ### 🔍 Category 5: Relationship Traversal & Reverse Lookups (3 scenarios - HIGH PRIORITY)
 
 #### ❌ **Scenario 30: Reverse Lookup - Find Device by Signal**
+
 **Business Value:** Navigate from signal back to parent device.
 
 **GraphQL Query:**
+
 ```graphql
 query FindDeviceBySignal {
   signal(ptnPath: "IED_001/MMXU1/TotW") {
@@ -833,6 +885,7 @@ query FindDeviceBySignal {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to SignalType
 descriptor
@@ -867,9 +920,11 @@ descriptor
 ---
 
 #### ❌ **Scenario 31: Find All Signals Using Specific Routing Value**
+
 **Business Value:** Identify all signals configured with specific value (e.g., "Remote" mode).
 
 **GraphQL Query:**
+
 ```graphql
 query SignalsByRoutingValue {
   routings(where: { value: { eq: "Remote" } }) {
@@ -890,6 +945,7 @@ query SignalsByRoutingValue {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Add to RoutingType
 descriptor
@@ -913,9 +969,11 @@ descriptor
 ---
 
 #### ❌ **Scenario 32: Cross-Device Signal References**
+
 **Business Value:** Find signals that reference or depend on other signals.
 
 **GraphQL Query:**
+
 ```graphql
 query CrossDeviceReferences {
   signal(ptnPath: "IED_001/MMXU1/TotW") {
@@ -939,9 +997,11 @@ query CrossDeviceReferences {
 ### 📋 Category 6: Reporting & Export (3 scenarios - MEDIUM PRIORITY)
 
 #### ❌ **Scenario 33: Custom Report (CSV Export)**
+
 **Business Value:** Generate custom CSV reports with exact columns needed.
 
 **GraphQL Query:**
+
 ```graphql
 query DeviceReport {
   deviceApplications {
@@ -968,9 +1028,11 @@ query DeviceReport {
 ---
 
 #### ❌ **Scenario 34: Audit Trail Report**
+
 **Business Value:** Compliance reporting for who changed what and when.
 
 **GraphQL Query:**
+
 ```graphql
 query AuditTrail($since: DateTime!) {
   deviceApplications(where: { lastUpdatedAt: { gte: $since } }) {
@@ -989,6 +1051,7 @@ query AuditTrail($since: DateTime!) {
 ```
 
 **Implementation Required:**
+
 - Add change tracking to mutations
 - Store change history
 
@@ -997,9 +1060,11 @@ query AuditTrail($since: DateTime!) {
 ---
 
 #### ❌ **Scenario 35: Configuration Export (Migration Format)**
+
 **Business Value:** Export device configuration for migration to new system.
 
 **GraphQL Query:**
+
 ```graphql
 query ExportForMigration {
   deviceApplications {
@@ -1034,9 +1099,11 @@ query ExportForMigration {
 ### 📱 Category 7: Mobile/Offline Scenarios (3 scenarios - HIGH PRIORITY)
 
 #### ❌ **Scenario 23: Minimal Sync (Mobile App)**
+
 **Business Value:** Mobile app syncs only essential data to save bandwidth.
 
 **GraphQL Query:**
+
 ```graphql
 query MobileSync {
   deviceApplications {
@@ -1058,9 +1125,11 @@ query MobileSync {
 ---
 
 #### ❌ **Scenario 24: Progressive Loading**
+
 **Business Value:** Load data as user navigates, not all upfront (better UX on slow networks).
 
 **GraphQL Queries:**
+
 ```graphql
 # Step 1: Initial load - Device list
 query InitialLoad {
@@ -1102,9 +1171,11 @@ query LoadSignals($fbPath: String!) {
 ---
 
 #### ❌ **Scenario 25: Offline-First Delta Sync**
+
 **Business Value:** Mobile app syncs only changed devices since last sync.
 
 **GraphQL Query:**
+
 ```graphql
 query DeltaSync($since: DateTime!) {
   deviceApplications(where: { lastUpdatedAt: { gt: $since } }) {
@@ -1117,6 +1188,7 @@ query DeltaSync($since: DateTime!) {
 ```
 
 **Implementation Required:**
+
 ```csharp
 [UseFiltering]
 [UseSorting]
@@ -1133,9 +1205,11 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataSto
 ### 🎨 Category 8: UI-Specific Queries (4 scenarios - MEDIUM PRIORITY)
 
 #### ❌ **Scenario 26: Tree View Data (Lazy Loading)**
+
 **Business Value:** Tree control loads children only when node expands.
 
 **GraphQL Query:**
+
 ```graphql
 query TreeViewNode($path: String!, $expand: Boolean!) {
   nodeByPath(ptnPath: $path) {
@@ -1159,6 +1233,7 @@ query TreeViewNode($path: String!, $expand: Boolean!) {
 ```
 
 **Implementation Required:**
+
 - Union type for polymorphic results
 - Computed `hasChildren` field
 - Custom `children` resolver
@@ -1168,9 +1243,11 @@ query TreeViewNode($path: String!, $expand: Boolean!) {
 ---
 
 #### ❌ **Scenario 27: Autocomplete/Type-Ahead**
+
 **Business Value:** Fast autocomplete for device/signal search.
 
 **GraphQL Query:**
+
 ```graphql
 query Autocomplete($search: String!) {
   searchDevices(query: $search, limit: 10) {
@@ -1182,6 +1259,7 @@ query Autocomplete($search: String!) {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<DeviceApplicationDto> SearchDevices(
     string query,
@@ -1200,9 +1278,11 @@ public IEnumerable<DeviceApplicationDto> SearchDevices(
 ---
 
 #### ❌ **Scenario 28: Grid/Table View with Pagination**
+
 **Business Value:** Large device lists with server-side pagination and sorting.
 
 **GraphQL Query:**
+
 ```graphql
 query DeviceGrid($page: Int!, $pageSize: Int!, $sortBy: String!) {
   deviceApplicationsPaginated(
@@ -1230,6 +1310,7 @@ query DeviceGrid($page: Int!, $pageSize: Int!, $sortBy: String!) {
 ```
 
 **Implementation Required:**
+
 ```csharp
 [UsePaging]
 [UseFiltering]
@@ -1245,9 +1326,11 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplicationsPaginated([Service
 ---
 
 #### ❌ **Scenario 29: Form Dropdown Options**
+
 **Business Value:** Load all dropdown options in single query for forms.
 
 **GraphQL Query:**
+
 ```graphql
 query FormOptions {
   deviceTypes: deviceApplications {
@@ -1265,6 +1348,7 @@ query FormOptions {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<string> GetUniqueDeviceTypes([Service] DataStore dataStore)
 {
@@ -1288,9 +1372,11 @@ public IEnumerable<string> GetUniqueCdcTypes([Service] DataStore dataStore)
 ### ⚡ Category 9: Real-Time & Monitoring (2 scenarios - FUTURE)
 
 #### ❌ **Scenario 36: Health Check Dashboard**
+
 **Business Value:** Real-time device health monitoring.
 
 **GraphQL Query:**
+
 ```graphql
 query HealthDashboard {
   deviceApplications {
@@ -1312,6 +1398,7 @@ query HealthDashboard {
 ```
 
 **Implementation Required:**
+
 - Integration with device monitoring service
 - Health status computation
 
@@ -1320,9 +1407,11 @@ query HealthDashboard {
 ---
 
 #### ❌ **Scenario 37: Real-Time Signal Monitoring (Subscriptions)**
+
 **Business Value:** Real-time updates when signal values change.
 
 **GraphQL Subscription:**
+
 ```graphql
 subscription SignalValueChanged($deviceName: String!) {
   signalUpdated(deviceName: $deviceName) {
@@ -1338,6 +1427,7 @@ subscription SignalValueChanged($deviceName: String!) {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public class Subscription
 {
@@ -1364,9 +1454,11 @@ await eventPublisher.SendAsync("SignalUpdated", signal);
 ### 🔐 Category 10: Permission-Based Views (2 scenarios - MEDIUM PRIORITY)
 
 #### ❌ **Scenario 38: Role-Based Field Access**
+
 **Business Value:** Different users see different fields based on roles.
 
 **GraphQL Schema:**
+
 ```csharp
 // Admin sees all fields
 descriptor
@@ -1391,6 +1483,7 @@ descriptor
 ```
 
 **GraphQL Queries:**
+
 ```graphql
 # Admin query
 query AdminView {
@@ -1414,6 +1507,7 @@ query OperatorView {
 ```
 
 **Implementation Required:**
+
 ```csharp
 // Program.cs
 builder.Services
@@ -1438,9 +1532,11 @@ builder.Services.AddAuthorization(options =>
 ---
 
 #### ❌ **Scenario 39: Station-Level Access Control**
+
 **Business Value:** Users only see devices for stations they have access to.
 
 **GraphQL Query:**
+
 ```graphql
 query MyDevices {
   deviceApplications(
@@ -1456,6 +1552,7 @@ query MyDevices {
 ```
 
 **Implementation Required:**
+
 ```csharp
 public IEnumerable<DeviceApplicationDto> GetDeviceApplications(
     [Service] DataStore dataStore,
@@ -1566,6 +1663,7 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications(
 ## 🎯 Quick Wins (Can Implement in < 1 Day)
 
 ### **1. Uncomment Existing Mutations** ⏱️ 1 hour
+
 ```csharp
 // In DeviceApplicationMutations.cs - Already coded, just commented out!
 - AddFunctionGroup
@@ -1583,6 +1681,7 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications(
 ---
 
 ### **2. Add HotChocolate Filtering** ⏱️ 2 hours
+
 ```csharp
 [UseFiltering]
 [UseSorting]
@@ -1599,6 +1698,7 @@ public IEnumerable<DeviceApplicationDto> GetDeviceApplications([Service] DataSto
 ---
 
 ### **3. Add Computed Fields to DeviceApplicationType** ⏱️ 4 hours
+
 ```csharp
 descriptor.Field("functionGroupCount").Resolve(/* ... */);
 descriptor.Field("functionBlockCount").Resolve(/* ... */);
@@ -1612,6 +1712,7 @@ descriptor.Field("signalCount").Resolve(/* ... */);
 ---
 
 ### **4. Add Autocomplete Query** ⏱️ 2 hours
+
 ```csharp
 public IEnumerable<DeviceApplicationDto> SearchDevices(
     string query, int limit, [Service] DataStore dataStore)
@@ -1735,6 +1836,7 @@ public record DeviceBasicInfoDto
 ```
 
 **Usage:**
+
 ```graphql
 # Filtering
 query {
@@ -1877,6 +1979,7 @@ public class DeviceApplicationType : ObjectType<DeviceApplicationDto>
 ```
 
 **Usage:**
+
 ```graphql
 query DeviceStatistics {
   deviceApplications {
@@ -1979,6 +2082,7 @@ public class FunctionGroupType : ObjectType<FunctionGroupDto>
 ```
 
 **Usage:**
+
 ```graphql
 query ReverseNavigation {
   signal(ptnPath: "IED_001/MMXU1/TotW") {
@@ -2010,6 +2114,7 @@ query ReverseNavigation {
 **Action Required:** Remove comment blocks (lines 98-290 approximately)
 
 **Mutations to Enable:**
+
 ```csharp
 1. AddFunctionGroup(devicePublicTechnicalName, functionGroupDto)
 2. AddFunction(functionGroupPtnPath, functionDto)
@@ -2024,6 +2129,7 @@ query ReverseNavigation {
 **Estimated Time:** ⏱️ **15 minutes** (just remove comments)
 
 **Testing:**
+
 ```graphql
 # Test 1: Add Function Group
 mutation {
@@ -2076,6 +2182,7 @@ mutation {
 ## 🎯 Recommended Implementation Order
 
 ### **Week 1: Quick Wins**
+
 1. ✅ Uncomment existing mutations (15 min)
 2. ✅ Add `[UseFiltering]` and `[UseSorting]` (2 hours)
 3. ✅ Add computed count fields to DeviceApplicationType (4 hours)
@@ -2086,6 +2193,7 @@ mutation {
 ---
 
 ### **Week 2: High-Value Features**
+
 1. ❌ Add reverse lookup fields (Signal→FB→Device) (4 hours)
 2. ❌ Add pagination support (4 hours)
 3. ❌ Add version statistics query (3 hours)
@@ -2096,6 +2204,7 @@ mutation {
 ---
 
 ### **Week 3: Analytics & Reporting**
+
 1. ❌ Add signal statistics (4 hours)
 2. ❌ Add configuration coverage (5 hours)
 3. ❌ Add device comparison (6 hours)
@@ -2105,6 +2214,7 @@ mutation {
 ---
 
 ### **Future Phases:**
+
 - **Month 2:** UI-specific queries (tree view, forms)
 - **Month 3:** Real-time subscriptions
 - **Month 4:** Advanced permissions
@@ -2114,17 +2224,20 @@ mutation {
 ## 📈 Expected Performance Improvements
 
 ### **Current Implementation (Basic CRUD):**
+
 - ✅ 100% DataLoader coverage → **90% fewer DB queries** vs naive implementation
 - ✅ Field resolvers → **50-90% less data** transferred vs REST
 - ✅ Single request for hierarchy → **70% fewer HTTP round-trips**
 
 ### **After Phase 1 (High Priority Scenarios):**
+
 - Dashboard queries → **80% faster** (aggregations server-side)
 - Search/filter → **95% less data** transferred
 - Mobile sync → **98% smaller** payload
 - Autocomplete → **100ms response** time
 
 ### **After Phase 2 (Medium Priority):**
+
 - Complete analytics capability
 - Zero client-side data aggregation
 - Reporting infrastructure complete
@@ -2134,6 +2247,7 @@ mutation {
 ## 🎁 Bonus: Scenarios That Already Work (But Not Documented)
 
 ### **Scenario: Nested Creation** ✅
+
 Because GraphQL accepts nested input, this already works:
 
 ```graphql
@@ -2164,6 +2278,7 @@ mutation CreateDeviceWithGroups {
 ---
 
 ### **Scenario: Conditional Field Loading** ✅
+
 GraphQL `@include` directive works out-of-the-box:
 
 ```graphql
@@ -2185,6 +2300,7 @@ query ConditionalData($includeStats: Boolean!) {
 ## 📝 Summary & Recommendations
 
 ### **Current State:**
+
 - ✅ **Strong foundation:** 100% DataLoader coverage, all core CRUD operations
 - ✅ **Production-ready:** Field resolvers, batching, proper architecture
 - ⚠️ **Missing features:** Filtering, aggregations, reverse lookups
@@ -2192,16 +2308,19 @@ query ConditionalData($includeStats: Boolean!) {
 ### **Recommendations:**
 
 **Immediate Actions (This Sprint):**
+
 1. ✅ **Uncomment mutations** - 15 minutes, 8 features unlocked
 2. ✅ **Add filtering/sorting** - 2 hours, 6 scenarios enabled
 3. ✅ **Add computed fields** - 4 hours, dashboard complete
 
 **Next Sprint:**
+
 1. ❌ **Reverse lookups** - Critical for navigation
 2. ❌ **Pagination** - Essential for large datasets
 3. ❌ **Autocomplete** - Common UI pattern
 
 **Long-term:**
+
 1. ❌ **Analytics/reporting** - Business intelligence
 2. ❌ **Permissions** - Enterprise security
 3. ❌ **Subscriptions** - Real-time monitoring
@@ -2212,6 +2331,7 @@ query ConditionalData($includeStats: Boolean!) {
 
 **Investment:** ~2 weeks of development  
 **Return:**
+
 - 39 GraphQL-enabled scenarios
 - 70-90% reduction in API calls
 - 50-98% reduction in data transfer
